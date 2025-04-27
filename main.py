@@ -6,6 +6,8 @@ import time
 import json
 import os
 import random
+import subprocess
+import re
 
 intents = discord.Intents.default()
 intents.voice_states = True
@@ -40,7 +42,7 @@ async def log_message(message):
 async def on_ready():
     await log_message(f"Logged in as `{bot.user}`")
     print(f"Logged in as {bot.user}")
-    bot.loop.create_task(delete_if_empty())
+    bot.loop.create_task(constant_loop())
 
 
 @bot.event
@@ -59,27 +61,47 @@ DATA_FILE = "data.json"
 
 # Load data from the file
 def load_data():
-    """Load data from the JSON file."""
+    # manually load new data from the cloud
     global user_channels
+    global mod_actions
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, "r") as file:
                 data = json.load(file)
                 user_channels = data.get("user_channels", {})
-                #await log_message(f"Data has been loaded")
+                mod_actions = data.get("mod_actions", {})
         except json.JSONDecodeError:
             #await log_message(f"Error: `{DATA_FILE}` is not a valid JSON file or is empty. Starting fresh.")
             user_channels = {}
+            mod_actions = {}
     else:
         # File doesn't exist, start fresh
         #await log_message(f"Error: `{DATA_FILE}` is not a valid JSON file or is empty. Starting fresh.")
         user_channels = {}
-
+        mod_actions = {}
 
 def save_data():
-    """Save data to the JSON file."""
+    data = {
+        "user_channels": user_channels,
+        "mod_actions": mod_actions
+    }
     with open(DATA_FILE, "w") as file:
-        json.dump({"user_channels": user_channels}, file, indent=4)
+        json.dump(data, file, indent=4)
+
+    # Update data on the Github
+    """
+    if lastUpdate - 1800 > round(time.time()):
+        return False
+    else:
+        lastUpdate = round(time.time())
+    
+    try:
+        subprocess.run(["git", "add", "data.json"], check=True)
+        subprocess.run(["git", "commit", "-m", "Update data.json"], check=True)
+        subprocess.run(["git", "push"], check=True)
+    except subprocess.CalledProcessError as e:
+        log_message(f"Error pushing changes to GitHub for data.json, '{e}'")
+    """
 
 
 load_data()
@@ -168,32 +190,39 @@ async def on_voice_state_update(member, before, after):
             #await log_message(f"personal vc: `{before.channel}`'s timer has been reset")
 
 
-async def delete_if_empty():
+async def constant_loop():
     while True:
         IDS = []
         for ID in user_channels:
             channel_id = int(user_channels[ID]['ChannelID'])
             channel = bot.get_channel(channel_id)
             user = await bot.fetch_user(ID)
-            if channel and len(channel.members
-                               ) == 0 and channel.guild and time.time() > int(
-                                   user_channels[ID]['TimeDel']):
+            if channel and len(channel.members) == 0 and channel.guild and time.time() > int(user_channels[ID]['TimeDel']):
                 IDS.append(ID)
                 await channel.delete()
                 #del user_channels[ID]
                 #save_data()
-                await log_message(
-                    f"personal vc belonging `{user}` has been deleted to due timer running out"
-                )
+                await log_message(f"personal vc belonging `{user}` has been deleted to due timer running out")
             if not channel:
                 IDS.append(ID)
-                await log_message(
-                    f"personal vc belonging to `{user}` has been deleted to due it no longer existing"
-                )
+                await log_message(f"personal vc belonging to `{user}` has been deleted to due it no longer existing")
         if len(IDS) > 0:
             for ID in IDS:
                 del user_channels[ID]
-                save_data()
+            save_data()
+        
+        for Case in mod_actions.values():
+            if Case['action'] == "ban" and "unban_time" in Case:
+                if round(time.time()) > int(Case["unban_time"]) and int(Case["unban_time"]) > 0:
+                    try:
+                        guild = bot.get_guild(1034558177510961182)
+                        await guild.unban(discord.Object(id=int(Case["user_id"])))
+                        await log_message(f"Succesfully unbanned `{Case['user_id']}`, Case `{Case}`")
+                        Case['unban_time'] = "0"
+                    except Exception as e:
+                        await log_message(f"Couldn't unban `{Case['user_id']}`: `{e}`")
+                        Case['unban_time'] = "0"
+
         await asyncio.sleep(120)
 
 
@@ -247,21 +276,130 @@ async def repeat(ctx, *, text: str):
         await ctx.send(text)
 
 # ultra cool admin only commands
+def CheckPerms(user):
+    if user.id == 277243145081716736:
+        return True
+    else:
+        return False
+
+def log_modcommand(user_id: int, action: str, reason: str, mod: str, unban_time: str=None):
+    entry = {
+        "user_id": str(user_id),
+        "action": action,
+        "timestamp": str(round(time.time())),
+        "reason": reason,
+        "moderator_id": str(mod)
+    }
+    if unban_time:
+        entry["unban_time"] = str(unban_time)
+
+    cases = len(mod_actions)
+    if not cases:
+        cases = 0
+
+    mod_actions[str(cases+1)] = entry
+    save_data()
+
+def parse_time(time_str):
+    match = re.match(r"(\d+)([dhm])", time_str.lower())
+    if not match:
+        return None
+
+    amount, unit = match.groups()
+    amount = int(amount)
+
+    if unit == "d":
+        return amount * 86400  # 1 day = 86400 seconds
+    elif unit == "h":
+        return amount * 3600   # 1 hour = 3600 seconds
+    elif unit == "m":
+        return amount * 60     # 1 minute = 60 seconds
+    else:
+        return None
+    
 @bot.command()
-async def kick(ctx):
-    await ctx.send("yeah your getting kicked (imma code ts later)")
+async def ban(ctx, member: discord.Member, *, args):
+    split = args.split(" ", 1)  # Split into time and reason
+    bantime = split[0]
+    duration = parse_time(bantime) if bantime else None
+
+    if duration:
+        reason = split[1] if len(split) > 1 else "No reason provided"
+    else:
+        bantime = None
+        reason = args
+
+    if CheckPerms(ctx.author):
+        await member.ban(reason=reason)
+
+        unbanTime = None
+        if duration:
+            unbanTime = round(time.time()) + duration
+        
+        log_modcommand(
+            user_id=member.id,
+            action="ban",
+            reason=reason,
+            mod=ctx.author.id,
+            unban_time=unbanTime
+        )
+
+        await log_message(f"`{member}` has been banned for `{bantime}` because `{reason}` by `{ctx.author}`")
+
+        if bantime:
+            embed=discord.Embed(description=f"**You have been banned in stuffs for {bantime}** | {reason}", color=0x0c8eeb)
+        else:
+            embed=discord.Embed(description=f"**You have been banned in stuffs** | {reason}", color=0x0c8eeb)
+        await member.send(embed=embed)
+
+    if bantime:
+        embed=discord.Embed(description=f"✅ **{member.name} has been BANNED for {bantime}** | {reason}", color=0x06700b)
+    else:
+        embed=discord.Embed(description=f"✅ **{member.name} has been BANNED** | {reason}", color=0x06700b)
+    await ctx.send(embed=embed)
 
 @bot.command()
-async def ban(ctx):
-    await ctx.send("yeah your getting banned (imma code ts later)")
+async def kick(ctx, member: discord.Member, *, reason):
+    if CheckPerms(ctx.author):
+        await member.kick(reason=reason)
+        
+        log_modcommand(
+            user_id=member.id,
+            action="kick",
+            reason=reason,
+            mod=ctx.author.id,
+        )
+
+        await log_message(f"`{member}` has been kicked because `{reason}` by `{ctx.author}`")
+
+        embed=discord.Embed(description=f"**You have been kicked from stuffs** | {reason}", color=0x0c8eeb)
+        await member.send(embed=embed)
+
+    embed=discord.Embed(description=f"✅ **{member.name} has been KICKED** | {reason}", color=0x06700b)
+    await ctx.send(embed=embed)
+
+@bot.command()
+async def warn(ctx, member: discord.Member, *, reason):
+    if CheckPerms(ctx.author):
+        
+        log_modcommand(
+            user_id=member.id,
+            action="warn",
+            reason=reason,
+            mod=ctx.author.id,
+        )
+
+        await log_message(f"`{member}` has been warned for `{reason}` by `{ctx.author}`")
+
+        embed=discord.Embed(description=f"**You have been warned in stuffs** | {reason}", color=0x0c8eeb)
+        await member.send(embed=embed)
+
+    embed=discord.Embed(description=f"✅ **{member.name} has been WARNED** | {reason}", color=0x06700b)
+    await ctx.send(embed=embed)
 
 @bot.command()
 async def mute(ctx):
-    await ctx.send("yeah your getting muted (imma code ts later)")
-
-@bot.command()
-async def warn(ctx):
-    await ctx.send("yeah your getting warned (imma code ts later)")
+    await ctx.send("yeah your getting MUTED (imma code ts later)")
 
 with open('secret.json') as f:
     secret = json.load(f)
