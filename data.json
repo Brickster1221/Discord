@@ -1,4 +1,12 @@
 {
     "user_channels": {},
-    "mod_actions": {}
+    "mod_actions": {
+        "1": {
+            "user_id": "1247588434642731161",
+            "action": "kick",
+            "timestamp": "1745802223",
+            "reason": "bye nerd",
+            "moderator_id": "277243145081716736"
+        }
+    }
 }

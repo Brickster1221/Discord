@@ -6,7 +6,6 @@ import time
 import json
 import os
 import random
-import subprocess
 import re
 
 intents = discord.Intents.default()
@@ -319,18 +318,26 @@ def parse_time(time_str):
     
 @bot.command()
 async def ban(ctx, member: discord.Member, *, args):
-    split = args.split(" ", 1)  # Split into time and reason
-    bantime = split[0]
-    duration = parse_time(bantime) if bantime else None
-
-    if duration:
-        reason = split[1] if len(split) > 1 else "No reason provided"
+    if not CheckPerms(ctx.author):
+        embed = discord.Embed(description="❌ You don't have permission to use this command.", color=0xcc182a)
+        return await ctx.send(embed=embed)
+    elif member.top_role >= ctx.author.top_role and ctx.author != ctx.guild.owner:
+        embed = discord.Embed(description="❌ You cant ban someone with a higher or equal role to you", color=0xcc182a)
+        return await ctx.send(embed=embed)
     else:
-        bantime = None
-        reason = args
+        split = args.split(" ", 1)  # Split into time and reason
+        bantime = split[0]
+        duration = parse_time(bantime) if bantime else None
 
-    if CheckPerms(ctx.author):
+        if duration:
+            reason = split[1] if len(split) > 1 else "No reason provided"
+        else:
+            bantime = None
+            reason = args
+
         await member.ban(reason=reason)
+
+        await log_message(f"`{member}` has been banned for `{bantime}` because `{reason}` by `{ctx.author}`")
 
         unbanTime = None
         if duration:
@@ -344,25 +351,40 @@ async def ban(ctx, member: discord.Member, *, args):
             unban_time=unbanTime
         )
 
-        await log_message(f"`{member}` has been banned for `{bantime}` because `{reason}` by `{ctx.author}`")
+        try:
+            if bantime:
+                embed=discord.Embed(description=f"**You have been banned in stuffs for {bantime}** | {reason}", color=0x0c8eeb)
+            else:
+                embed=discord.Embed(description=f"**You have been banned in stuffs** | {reason}", color=0x0c8eeb)
+            await member.send(embed=embed)
+        except discord.Forbidden:
+            await log_message(f"could not dm `{member}` during kick")
 
         if bantime:
-            embed=discord.Embed(description=f"**You have been banned in stuffs for {bantime}** | {reason}", color=0x0c8eeb)
+            embed=discord.Embed(description=f"✅ **{member.mention} has been BANNED for {bantime}** | {reason}", color=0x06700b)
         else:
-            embed=discord.Embed(description=f"**You have been banned in stuffs** | {reason}", color=0x0c8eeb)
-        await member.send(embed=embed)
+            embed=discord.Embed(description=f"✅ **{member.mention} has been BANNED** | {reason}", color=0x06700b)
+        await ctx.send(embed=embed)
 
-    if bantime:
-        embed=discord.Embed(description=f"✅ **{member.name} has been BANNED for {bantime}** | {reason}", color=0x06700b)
-    else:
-        embed=discord.Embed(description=f"✅ **{member.name} has been BANNED** | {reason}", color=0x06700b)
-    await ctx.send(embed=embed)
+@ban.error
+async def ban_error(ctx, error):
+    if isinstance(error, commands.BadArgument):
+        embed=discord.Embed(description=f"❌ Please mention a valid member", color=0xcc182a)
+        await ctx.send(embed=embed)
 
 @bot.command()
-async def kick(ctx, member: discord.Member, *, reason):
-    if CheckPerms(ctx.author):
+async def kick(ctx, member: discord.Member, *, reason="No reason provided"):
+    if not CheckPerms(ctx.author):
+        embed = discord.Embed(description="❌ You don't have permission to use this command.", color=0xcc182a)
+        return await ctx.send(embed=embed)
+    elif member.top_role >= ctx.author.top_role and ctx.author != ctx.guild.owner:
+        embed = discord.Embed(description="❌ You cant kick someone with a higher or equal role to you", color=0xcc182a)
+        return await ctx.send(embed=embed)
+    else:
         await member.kick(reason=reason)
         
+        await log_message(f"`{member}` has been kicked because `{reason}` by `{ctx.author}`")
+
         log_modcommand(
             user_id=member.id,
             action="kick",
@@ -370,18 +392,34 @@ async def kick(ctx, member: discord.Member, *, reason):
             mod=ctx.author.id,
         )
 
-        await log_message(f"`{member}` has been kicked because `{reason}` by `{ctx.author}`")
+        embed=discord.Embed(description=f"✅ **{member.mention} has been KICKED** | {reason}", color=0x06700b)
+        await ctx.send(embed=embed)
 
-        embed=discord.Embed(description=f"**You have been kicked from stuffs** | {reason}", color=0x0c8eeb)
-        await member.send(embed=embed)
+        try:
+            embed=discord.Embed(description=f"**You have been kicked from stuffs** | {reason}", color=0x0c8eeb)
+            await member.send(embed=embed)
+        except discord.Forbidden:
+            await log_message(f"could not dm `{member}` during kick")
 
-    embed=discord.Embed(description=f"✅ **{member.name} has been KICKED** | {reason}", color=0x06700b)
-    await ctx.send(embed=embed)
+@kick.error
+async def kick_error(ctx, error):
+    if isinstance(error, commands.BadArgument):
+        embed=discord.Embed(description=f"❌ Please mention a valid member", color=0xcc182a)
+        await ctx.send(embed=embed)
+
+
 
 @bot.command()
-async def warn(ctx, member: discord.Member, *, reason):
-    if CheckPerms(ctx.author):
-        
+async def warn(ctx, member: discord.Member, *, reason="No reason provided"):
+    if not CheckPerms(ctx.author):
+        embed = discord.Embed(description="❌ You don't have permission to use this command.", color=0xcc182a)
+        return await ctx.send(embed=embed)
+    elif member.top_role > ctx.author.top_role and ctx.author != ctx.guild.owner:
+        embed = discord.Embed(description="❌ You cant warn someone with a higher role than you", color=0xcc182a)
+        return await ctx.send(embed=embed)
+    else:        
+        await log_message(f"`{member}` has been warned for `{reason}` by `{ctx.author}`")
+
         log_modcommand(
             user_id=member.id,
             action="warn",
@@ -389,17 +427,29 @@ async def warn(ctx, member: discord.Member, *, reason):
             mod=ctx.author.id,
         )
 
-        await log_message(f"`{member}` has been warned for `{reason}` by `{ctx.author}`")
+        embed=discord.Embed(description=f"✅ **{member.mention} has been WARNED** | {reason}", color=0x06700b)
+        await ctx.send(embed=embed)
 
-        embed=discord.Embed(description=f"**You have been warned in stuffs** | {reason}", color=0x0c8eeb)
-        await member.send(embed=embed)
+        try:
+            embed=discord.Embed(description=f"**You have been warned in stuffs** | {reason}", color=0x0c8eeb)
+            await member.send(embed=embed)
+        except discord.Forbidden:
+            await log_message(f"could not dm `{member}` during warn")
 
-    embed=discord.Embed(description=f"✅ **{member.name} has been WARNED** | {reason}", color=0x06700b)
-    await ctx.send(embed=embed)
+@warn.error
+async def warn_error(ctx, error):
+    if isinstance(error, commands.BadArgument):
+        embed=discord.Embed(description=f"❌ Please mention a valid member", color=0xcc182a)
+        await ctx.send(embed=embed)
 
 @bot.command()
 async def mute(ctx):
     await ctx.send("yeah your getting MUTED (imma code ts later)")
+
+@bot.command()
+async def test(ctx):
+    embed=discord.Embed(description=f"✅ **<@1247588434642731161> has been KICKED** | `bye nerd`", color=0x06700b)
+    await ctx.send(embed=embed)
 
 with open('secret.json') as f:
     secret = json.load(f)
