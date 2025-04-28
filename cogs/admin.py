@@ -1,10 +1,8 @@
 import discord
 from discord.ext import commands
-import asyncio
 import time
 import json
 import os
-import random
 import re
 
 class AdminCommands(commands.Cog):
@@ -109,7 +107,7 @@ class AdminCommands(commands.Cog):
                 bantime = None
                 reason = args
 
-            # await member.ban(reason=reason)
+            await member.ban(reason=reason)
 
             await self.bot.log(f"`{member}` has been banned for `{bantime}` because `{reason}` by `{ctx.author}`")
 
