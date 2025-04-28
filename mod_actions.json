@@ -1,6 +1,5 @@
 {
-    "user_channels": {},
-    "mod_actions": {
+    "actions": {
         "1": {
             "user_id": "1247588434642731161",
             "action": "kick",
