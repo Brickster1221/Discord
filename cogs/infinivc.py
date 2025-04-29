@@ -13,21 +13,15 @@ class infinivc(commands.Cog):
     if os.path.exists('user_channels.json'):
         try:
             with open('user_channels.json', "r") as file:
-                data = json.load(file)
-                user_channels = data.get("actions", {})
+                user_channels = json.load(file)
         except json.JSONDecodeError:
-            #await log_message(f"Error: `{DATA_FILE}` is not a valid JSON file or is empty. Starting fresh.")
             user_channels = {}
     else:
-        #await log_message(f"Error: `{DATA_FILE}` is not a valid JSON file or is empty. Starting fresh.")
         user_channels = {}
 
     def save_data(self):
-        data = {
-            "channels": user_channels
-        }
         with open('user_channels.json', "w") as file:
-            json.dump(data, file, indent=4)
+            json.dump(user_channels, file, indent=4)
 
     def get_data(self, value, whatfind='ChannelID'):
         if not value:
@@ -39,7 +33,7 @@ class infinivc(commands.Cog):
         try:
             user_id = next((user for user, details in user_channels.items() if details[whatfind] == value), None)
         except:
-            print("error")
+            print("error") # amazing
 
         if user_id:
             return user_id
@@ -94,7 +88,6 @@ class infinivc(commands.Cog):
 
             message = await temp_channel.send(f"Voice Channel created by: `{member}`")
             await self.update_data(member.id, message.id, 'MessageID')
-            # Move the member to the newly created channel
             await member.move_to(temp_channel)
             await self.update_data(member.id, temp_channel.id, 'ChannelID')
             await self.bot.log(f"`{member}` has created a voice channel")
@@ -104,13 +97,11 @@ class infinivc(commands.Cog):
             if self.get_data(after.channel.id, 'ChannelID') in user_channels:
                 user_id = self.get_data(after.channel.id)
                 await self.update_data(user_id,round(time.time()) + 48 * 60 * 60, 'TimeDel')
-                #await log_message(f"personal vc: `{after.channel}`'s timer has been reset")
 
         if before.channel:
             if self.get_data(before.channel.id, 'ChannelID') in user_channels:
                 user_id = self.get_data(before.channel.id)
                 await self.update_data(user_id,round(time.time()) + 48 * 60 * 60, 'TimeDel')
-                #await log_message(f"personal vc: `{before.channel}`'s timer has been reset")
 
 
 async def setup(bot):

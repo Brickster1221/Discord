@@ -42,25 +42,19 @@ def load_data():
     if os.path.exists('user_channels.json'):
         try:
             with open('user_channels.json', "r") as file:
-                data = json.load(file)
-                user_channels = data.get("channels", {})
+                user_channels = json.load(file)
         except json.JSONDecodeError:
-            #await log_message(f"Error: `{DATA_FILE}` is not a valid JSON file or is empty. Starting fresh.")
             user_channels = {}
     else:
-        #await log_message(f"Error: `{DATA_FILE}` is not a valid JSON file or is empty. Starting fresh.")
         user_channels = {}
 
     if os.path.exists('mod_actions.json'):
         try:
             with open('mod_actions.json', "r") as file:
-                data = json.load(file)
-                mod_actions = data.get("actions", {})
+                mod_actions = json.load(file)
         except json.JSONDecodeError:
-            #await log_message(f"Error: `{DATA_FILE}` is not a valid JSON file or is empty. Starting fresh.")
             mod_actions = {}
     else:
-        #await log_message(f"Error: `{DATA_FILE}` is not a valid JSON file or is empty. Starting fresh.")
         mod_actions = {}
 
 def save_data():
@@ -69,8 +63,6 @@ def save_data():
     }
     with open('user_channels.json', "w") as file:
         json.dump(data, file, indent=4)
-
-
 load_data()
 
 async def constant_loop():
@@ -110,8 +102,7 @@ async def constant_loop():
         await asyncio.sleep(300)
 
 
-WelcomeID = 1265540793456787546  #Channel where welcome/leave messages are sent
-
+WelcomeID = 1265540793456787546
 @bot.event
 async def on_member_join(member):
     channel = member.guild.get_channel(WelcomeID)
@@ -121,7 +112,6 @@ async def on_member_join(member):
 
     role = discord.utils.get(member.guild.roles, name="hi")
     await member.add_roles(role)
-
 
 @bot.event
 async def on_member_remove(member):
@@ -136,7 +126,7 @@ async def on_member_remove(member):
             minutes, _ = divmod(remainder, 60)
 
             duration = f"{days} days, {hours} hours, and {minutes} minutes"
-            await channel.send(    f"<- {member.mention} has left the server >:C, they were here for {duration}.")
+            await channel.send(f"<- {member.mention} has left the server >:C, they were here for {duration}.")
         else:
             await channel.send(f"<- {member.mention} has left the server. >:C")
 
