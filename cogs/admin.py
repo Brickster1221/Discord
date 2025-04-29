@@ -98,11 +98,36 @@ class AdminCommands(commands.Cog):
             return True
         
     async def check_error(self, ctx, error):
-        if isinstance(error, commands.BadArgument):
-            return await ctx.send(embed=discord.Embed(description=f"❌ Please mention a valid member", color=0xcc182a))
+        await self.bot.log(f"Unknown error occured while taking action on a member: `{error}`")
+        return await ctx.send(embed=discord.Embed(description=f"❌ an unknown error has occured", color=0xcc182a))
+    
+    @commands.command()
+    async def modlog(self, ctx, member: str):
+        member = await self.get_member(ctx, member)
+        if not member:
+            member = ctx.author
+        
+        casefound = False
+        embed=discord.Embed(title=f"Mod actions against {member}", color=0x0c8eeb)
+        for id, case in mod_actions.items():
+            if int(case['user_id']) == member.id:
+                casefound = True
+                moderator = await ctx.guild.fetch_member(int(case['moderator_id']))
+                embed.add_field(
+                    name=f"Case #{id}",
+                    value=(
+                        f"**Action:** {case['action'].capitalize()}\n"
+                        f"**Reason:** {case['reason']}\n"
+                        f"**User:** {member.mention} ({member})\n"
+                        f"**Moderator:** {moderator.mention} ({moderator})\n"
+                        f"Issued: <t:{case['timestamp']}:R>"
+                    ),
+                    inline=False
+                )
+        if casefound:
+            return await ctx.send(embed=discord.Embed(description=f"❌ There are no entries for this user", color=0xcc182a))
         else:
-            await self.bot.log(f"Unknown error occured while banning member: `{error}`")
-            return await ctx.send(embed=discord.Embed(description=f"❌ an unknown error has occured", color=0xcc182a))
+            return await ctx.send(embed=embed)
         
     @commands.command()
     async def ban(self, ctx, member: str, *, args="No reason provided"):
