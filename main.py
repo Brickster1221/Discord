@@ -108,7 +108,7 @@ async def on_member_join(member):
     channel = member.guild.get_channel(WelcomeID)
     messages = [f"{member.mention} has joined the server!!", f"Welcome {member.mention} to the server!!"]
     message = random.choice(messages)
-    await channel.send(f"-> {message}")
+    await channel.send(f"-> ({str(member.guild.member_count)}) {message}")
 
     role = discord.utils.get(member.guild.roles, name="hi")
     await member.add_roles(role)
@@ -116,19 +116,25 @@ async def on_member_join(member):
 @bot.event
 async def on_member_remove(member):
     channel = member.guild.get_channel(WelcomeID)
-    if channel:
-        if member.joined_at:
-            now = datetime.now(timezone.utc)
-            time_in_server = now - member.joined_at
-            days = time_in_server.days
-            seconds = time_in_server.seconds
-            hours, remainder = divmod(seconds, 3600)
-            minutes, _ = divmod(remainder, 60)
+    if not channel:
+        return
 
-            duration = f"{days} days, {hours} hours, and {minutes} minutes"
-            await channel.send(f"<- {member.mention} has left the server >:C, they were here for {duration}.")
-        else:
-            await channel.send(f"<- {member.mention} has left the server. >:C")
+    duration = None
+    if member.joined_at:
+        now = datetime.now(timezone.utc)
+        time_in_server = now - member.joined_at
+        days = time_in_server.days
+        seconds = time_in_server.seconds
+        hours, remainder = divmod(seconds, 3600)
+        minutes, _ = divmod(remainder, 60)
+
+        duration = f"{days} days, {hours} hours, and {minutes} minutes"
+    
+    messages = [f"{member.mention} has left the server >:C"]
+    message = random.choice(messages)
+    if duration:
+        message = f"{message}, they were here for {duration}"
+    await channel.send(f"<- ({str(member.guild.member_count)}) {message}")
 
 
 @bot.command()
