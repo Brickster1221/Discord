@@ -33,6 +33,8 @@ class infinivc(commands.Cog):
         user_id = str(user_id)
         value = str(value)
 
+        if user_id not in self.user_channels:
+            self.user_channels[user_id] = {}
         self.user_channels[user_id][type] = value
 
         if type == "TimeDel" and self.user_channels[user_id]['MessageID']:
@@ -52,14 +54,14 @@ class infinivc(commands.Cog):
         guild = str(member.guild.id)
         # Check if a member joined the specific VC
         if after.channel and guild in self.guild_specific:
-            if after.channel.id == int(self.guild_specific["infinivc_channel"]):
-                category = member.guild.get_channel(int(self.guild_specific["infinivc_category"]))
+            if after.channel.id == int(self.guild_specific[guild]["infinivc_channel"]):
+                category = member.guild.get_channel(int(self.guild_specific[guild]["infinivc_category"]))
                 existing = self.user_channels.get(str(member.id))
                 if existing:
                     await member.move_to(existing)
                     return
-                else:
-                    self.user_channels[str(member.id)]['ChannelID'] = ""
+                #else:
+                    #self.user_channels[str(member.id)]['ChannelID'] = ""
 
                 # Create a temporary voice channel
                 overwrites = {
