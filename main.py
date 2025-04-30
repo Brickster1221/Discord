@@ -14,10 +14,10 @@ intents.members = True
 intents.message_content = True
 bot = commands.Bot(command_prefix="?", intents=intents)
 
-async def log_message(message):
+async def log_message(message, guild=1034558177510961182):
     timestamp = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
     print(f"{timestamp} {message}")
-    channel = bot.get_channel(1036159229440032768)
+    channel = bot.get_channel(int(guild_specific[str(guild)]["log_channel"]))
     if channel:
         await channel.send(
             f"<t:{round(time.time())}> (<t:{round(time.time())}:R>) {message}")
@@ -39,6 +39,7 @@ async def on_message(message):
 def load_data():
     global user_channels
     global mod_actions
+    global guild_specific
     if os.path.exists('user_channels.json'):
         try:
             with open('user_channels.json', "r") as file:
@@ -57,12 +58,18 @@ def load_data():
     else:
         mod_actions = {}
 
+    if os.path.exists('guild_specific.json'):
+        try:
+            with open('guild_specific.json', "r") as file:
+                guild_specific = json.load(file)
+        except json.JSONDecodeError:
+            guild_specific = {}
+    else:
+        guild_specific = {}
+
 def save_data():
-    data = {
-        "user_channels": user_channels
-    }
     with open('user_channels.json', "w") as file:
-        json.dump(data, file, indent=4)
+        json.dump(user_channels, file, indent=4)
 load_data()
 
 async def constant_loop():
@@ -87,6 +94,7 @@ async def constant_loop():
                 del user_channels[ID]
             save_data()
         
+        """
         for Case in mod_actions.values():
             if Case['action'] == "ban" and "unban_time" in Case:
                 if round(time.time()) > int(Case["unban_time"]) and int(Case["unban_time"]) > 0:
@@ -98,14 +106,18 @@ async def constant_loop():
                     except Exception as e:
                         await log_message(f"Couldn't unban `{Case['user_id']}`: `{e}`")
                         Case['unban_time'] = "0"
+        """
 
         await asyncio.sleep(300)
 
 
-WelcomeID = 1265540793456787546
 @bot.event
 async def on_member_join(member):
-    channel = member.guild.get_channel(WelcomeID)
+    if member.guild.id not in guild_specific:
+        return log_message("please put your guild id in guild_specific.json")
+    if "welcome_channel" not in guild_specific[str(member.guild.id)]:
+        return log_message("please put a `welcome_channel` id in your guild settings")
+    channel = member.guild.get_channel(int(guild_specific[str(member.guild.id)]["welcome_channel"]))
     messages = [f"{member.mention} has joined the server!!", f"Welcome {member.mention} to the server!!"]
     message = random.choice(messages)
     await channel.send(f"-> ({str(member.guild.member_count)}) {message}")
@@ -115,7 +127,11 @@ async def on_member_join(member):
 
 @bot.event
 async def on_member_remove(member):
-    channel = member.guild.get_channel(WelcomeID)
+    if member.guild.id not in guild_specific:
+        return await log_message("please put your guild id in guild_specific.json")
+    if "welcome_channel" not in guild_specific[str(member.guild.id)]:
+        return await log_message("please put a `welcome_channel` id in your guild settings")
+    channel = member.guild.get_channel(int(guild_specific[str(member.guild.id)]["welcome_channel"]))
     if not channel:
         return
 

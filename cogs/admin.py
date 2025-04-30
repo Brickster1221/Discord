@@ -40,22 +40,26 @@ class AdminCommands(commands.Cog):
 
     # ultra cool admin only commands
 
-    def log_modcommand(self, user_id: int, action: str, reason: str, mod: str, unban_time: str=None):
+    def log_modcommand(self, user_id: int, action: str, reason: str, mod: str, guild: str, unban_time: str=None):
         entry = {
             "user_id": str(user_id),
             "action": action,
             "timestamp": str(round(time.time())),
             "reason": reason,
-            "moderator_id": str(mod)
+            "moderator_id": str(mod),
         }
         if unban_time:
-            entry["unban_time"] = str(unban_time)
+            entry["duration"] = str(unban_time)
 
-        cases = len(mod_actions)
+        guild = str(guild)
+        if guild not in mod_actions:
+            mod_actions[guild] = {}
+        
+        cases = len(mod_actions[guild])
         if not cases:
             cases = 0
 
-        mod_actions[str(cases+1)] = entry
+        mod_actions[guild][str(cases+1)] = entry
         self.save_data()
 
     def parse_time(self, time_str):
@@ -107,11 +111,11 @@ class AdminCommands(commands.Cog):
         if not member:
             member = ctx.author
         
-        casefound = False
+        casefound = 0
         embed=discord.Embed(title=f"Mod actions against {member}", color=0x0c8eeb)
-        for id, case in mod_actions.items():
+        for id, case in mod_actions[str(ctx.guild.id)].items():
             if int(case['user_id']) == member.id:
-                casefound = True
+                casefound += 1
                 moderator = await ctx.guild.fetch_member(int(case['moderator_id']))
                 embed.add_field(
                     name=f"Case #{id}",
@@ -124,10 +128,13 @@ class AdminCommands(commands.Cog):
                     ),
                     inline=False
                 )
-        if casefound:
-            return await ctx.send(embed=discord.Embed(description=f"❌ There are no entries for this user", color=0xcc182a))
-        else:
+        if  casefound > 0:
             return await ctx.send(embed=embed)
+        else:
+            return await ctx.send(embed=discord.Embed(description=f"❌ There are no entries for this user", color=0xcc182a))
+    @modlog.error
+    async def modlogerror(self, ctx, error):
+        await self.check_error(ctx, error)
         
     @commands.command()
     async def ban(self, ctx, member: str, *, args="No reason provided"):
@@ -155,6 +162,7 @@ class AdminCommands(commands.Cog):
             action="ban",
             reason=reason,
             mod=ctx.author.id,
+            guild=ctx.guild.id,
             unban_time=unbanTime
         )
 
@@ -181,6 +189,36 @@ class AdminCommands(commands.Cog):
         await self.check_error(ctx,error)
 
     @commands.command()
+    async def unban(self, ctx, member: str, *, reason="No reason provided"):
+        member = await self.get_member(ctx, member)
+        if not member:
+            return
+        if not await self.check_perms(ctx, member):
+            return
+        
+        ctx.guild.unban(member)
+        await self.bot.log(f"`{member}` has been unbanned for `{reason}` by `{ctx.author}`")
+
+        self.log_modcommand(
+            user_id=member.id,
+            action="unban",
+            reason=reason,
+            mod=ctx.author.id,
+            guild=ctx.guild.id
+        )
+
+        await ctx.send(embed=discord.Embed(description=f"✅ **{member.mention} has been UNBANNED** | {reason}", color=0x06700b))
+
+        try:
+            await member.send(embed=discord.Embed(description=f"**You have been unban from stuffs** | {reason}", color=0x0c8eeb))
+        except discord.Forbidden:
+            await self.bot.log(f"could not dm `{member}` during unban")
+
+    @unban.error
+    async def unban_error(self, ctx, error):
+        await self.check_error(ctx,error)
+
+    @commands.command()
     async def kick(self, ctx, member: str, *, reason="No reason provided"):
         member = await self.get_member(ctx, member)
         if not member:
@@ -196,6 +234,7 @@ class AdminCommands(commands.Cog):
             action="kick",
             reason=reason,
             mod=ctx.author.id,
+            guild=ctx.guild.id
         )
 
         await ctx.send(embed=discord.Embed(description=f"✅ **{member.mention} has been KICKED** | {reason}", color=0x06700b))
@@ -224,6 +263,7 @@ class AdminCommands(commands.Cog):
             action="warn",
             reason=reason,
             mod=ctx.author.id,
+            guild=ctx.guild.id
         )
 
         embed=discord.Embed(description=f"✅ **{member.mention} has been WARNED** | {reason}", color=0x06700b)
