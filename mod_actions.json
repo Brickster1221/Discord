@@ -1,13 +1,6 @@
 {
     "1034558177510961182": {
         "1": {
-            "user_id": "930248174529028166",
-            "action": "warn",
-            "timestamp": "1746042449",
-            "reason": "No reason provided",
-            "moderator_id": "277243145081716736"
-        },
-        "2": {
             "user_id": "1247588434642731161",
             "action": "kick",
             "timestamp": "1745802223",

@@ -110,6 +110,10 @@ async def constant_loop():
 
         await asyncio.sleep(300)
 
+@bot.command(name='h', aliases=[''])
+async def help_command(ctx, args):
+    embed=discord.Embed(title="List of commands", description="this is a full list of commands")
+    embed.add_field(name="i code later sorry")
 
 @bot.event
 async def on_member_join(member):

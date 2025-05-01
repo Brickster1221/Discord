@@ -40,7 +40,7 @@ class AdminCommands(commands.Cog):
 
     # ultra cool admin only commands
 
-    def log_modcommand(self, user_id: int, action: str, reason: str, mod: str, guild: str, unban_time: str=None):
+    def log_modcommand(self, user_id: int, action: str, reason: str, mod: str, guild: str, timeout: str=None):
         entry = {
             "user_id": str(user_id),
             "action": action,
@@ -48,18 +48,15 @@ class AdminCommands(commands.Cog):
             "reason": reason,
             "moderator_id": str(mod),
         }
-        if unban_time:
-            entry["duration"] = str(unban_time)
+        if timeout:
+            entry["duration"] = str(timeout)
 
         guild = str(guild)
         if guild not in mod_actions:
             mod_actions[guild] = {}
-        
-        cases = len(mod_actions[guild])
-        if not cases:
-            cases = 0
 
-        mod_actions[guild][str(cases+1)] = entry
+        numb = max(int(k) for k in mod_actions[guild].keys()) + 1
+        mod_actions[guild][str(numb)] = entry
         self.save_data()
 
     def parse_time(self, time_str):
@@ -100,16 +97,12 @@ class AdminCommands(commands.Cog):
             return False
         else:
             return True
-        
-    async def check_error(self, ctx, error):
-        await self.bot.log(f"Unknown error occured while taking action on a member: `{error}`")
-        return await ctx.send(embed=discord.Embed(description=f"❌ an unknown error has occured", color=0xcc182a))
     
     @commands.command()
-    async def modlog(self, ctx, member: str):
+    async def modlog(self, ctx, member: str="None"):
         member = await self.get_member(ctx, member)
         if not member:
-            member = ctx.author
+            return
         
         casefound = 0
         embed=discord.Embed(title=f"Mod actions against {member}", color=0x0c8eeb)
@@ -117,170 +110,109 @@ class AdminCommands(commands.Cog):
             if int(case['user_id']) == member.id:
                 casefound += 1
                 moderator = await ctx.guild.fetch_member(int(case['moderator_id']))
-                embed.add_field(
-                    name=f"Case #{id}",
+                embed.add_field(name=f"Case #{id}",
                     value=(
                         f"**Action:** {case['action'].capitalize()}\n"
                         f"**Reason:** {case['reason']}\n"
                         f"**User:** {member.mention} ({member})\n"
                         f"**Moderator:** {moderator.mention} ({moderator})\n"
                         f"Issued: <t:{case['timestamp']}:R>"
-                    ),
-                    inline=False
-                )
+                    ), inline=False)
         if  casefound > 0:
             return await ctx.send(embed=embed)
         else:
             return await ctx.send(embed=discord.Embed(description=f"❌ There are no entries for this user", color=0xcc182a))
-    @modlog.error
-    async def modlogerror(self, ctx, error):
-        await self.check_error(ctx, error)
-        
-    @commands.command()
-    async def ban(self, ctx, member: str, *, args="No reason provided"):
-        member = await self.get_member(ctx, member)
-        if not member:
-            return
-        if not await self.check_perms(ctx, member):
-            return
-        
-        split = args.split(" ", 1)  # Split into time and reason
-        bantime = split[0]
-        duration = self.parse_time(bantime) if bantime else None
 
-        reason = split[1] if duration and len(split) > 1 else args
-        if not duration:
-            bantime = None
-
-        await member.ban(reason=reason)
-        await self.bot.log(f"`{member}` has been banned for `{bantime}` because `{reason}` by `{ctx.author}`")
-
-        unbanTime = round(time.time()) + duration if duration else None
-        
-        self.log_modcommand(
-            user_id=member.id,
-            action="ban",
-            reason=reason,
-            mod=ctx.author.id,
-            guild=ctx.guild.id,
-            unban_time=unbanTime
-        )
-
+    async def moderate(self, ctx, action: str, member: str, args):
         try:
+            member = await self.get_member(ctx, member)
+            if not member:
+                return
+            if not await self.check_perms(ctx, member):
+                return
+
+            split = args.split(" ", 1)  # Split into time and reason
+            time = split[0]
+            duration = self.parse_time(time) if time else None
+
+            reason = split[1] if duration and len(split) > 1 else args
+            if not duration:
+                time = None
+
+            if action == "ban":
+                await member.ban(reason=reason)
+                await self.bot.log(f"`{member}` has been banned for `{time}` because `{reason}` by `{ctx.author}`")
+            elif action == "unban":
+                await ctx.guild.unban(member)
+                await self.bot.log(f"`{member}` has been unbanned for `{reason}` by `{ctx.author}`")
+            elif action == "kick":
+                await member.kick(reason=reason)
+                await self.bot.log(f"`{member}` has been kicked for `{reason}` by `{ctx.author}`")
+            elif action == "warn":
+                await self.bot.log(f"`{member}` has been warned for `{reason}` by `{ctx.author}`")
+            elif action == "mute":
+                ctx.send("command not finished yet, sorry!")
+                return
+
+            timeout = round(time.time()) + duration if duration else None
+
+            self.log_modcommand(
+                user_id=member.id,
+                action=action,
+                reason=reason,
+                mod=ctx.author.id,
+                guild=ctx.guild.id,
+                timeout=timeout
+            )
+
+            dm_msg = {
+                "ban": f"**You have been banned in stuffs for {time}** | {reason}" if time else f"**You have been banned in stuffs** | {reason}",
+                "unban": f"**You have been unbanned from stuffs** | {reason}",
+                "kick": f"**You have been kicked from stuffs** | {reason}",
+                "warn": f"**You have been warned in stuffs** | {reason}"
+            }[action]
+
+            try:
+                embed=discord.Embed(description=dm_msg, color=0x0c8eeb)
+                if action == "ban":
+                    embed.set_footer(text="If you felt that this ban was unfair, please us our unban form, linklinklinklinklinklink")
+                await member.send(embed=embed)
+            except discord.Forbidden:
+                await self.bot.log(f"could not dm `{member}` during {action}")
+
+            funny = {
+                "ban": f"BANNED for {time}" if time else f"BANNED",
+                "unban": f"UNBANNED",
+                "kick": f"KICKED",
+                "warn": f"WARNED"
+            }[action]
+
             embed=discord.Embed(description=(
-                                f"**You have been banned in stuffs for {bantime}** | {reason}"
-                                if bantime else
-                                f"**You have been banned in stuffs** | {reason}"
-                                ), color=0x0c8eeb)
-            embed.set_footer(text="If you felt that this ban was unfair, please us our unban form, linklinklinklinklinklink")
-            await member.send(embed=embed)
-        except discord.Forbidden:
-            await self.bot.log(f"could not dm `{member}` during ban")
-
-        embed=discord.Embed(description=(
-            f"✅ **{member.mention} has been BANNED for {bantime}** | {reason}"
-            if bantime else
-            f"✅ **{member.mention} has been BANNED** | {reason}"
-            ), color=0x06700b)
-        await ctx.send(embed=embed)
-
-    @ban.error
-    async def ban_error(self, ctx, error):
-        await self.check_error(ctx,error)
+                f"✅ **{member.mention} has been {funny}** | {reason}"), color=0x06700b)
+            await ctx.send(embed=embed)
+        except Exception as e:
+            await self.bot.log(f"Unknown error occured while taking action on a member: {e}")
+            return await ctx.send(embed=discord.Embed(description=f"❌ An unexpected error has occured.", color=0xcc182a))
+    
+    @commands.command()
+    async def ban(self, ctx, member: str="None", *, args="No reason provided"):
+        await self.moderate(ctx, "ban", member, args)
 
     @commands.command()
-    async def unban(self, ctx, member: str, *, reason="No reason provided"):
-        member = await self.get_member(ctx, member)
-        if not member:
-            return
-        if not await self.check_perms(ctx, member):
-            return
-        
-        ctx.guild.unban(member)
-        await self.bot.log(f"`{member}` has been unbanned for `{reason}` by `{ctx.author}`")
-
-        self.log_modcommand(
-            user_id=member.id,
-            action="unban",
-            reason=reason,
-            mod=ctx.author.id,
-            guild=ctx.guild.id
-        )
-
-        await ctx.send(embed=discord.Embed(description=f"✅ **{member.mention} has been UNBANNED** | {reason}", color=0x06700b))
-
-        try:
-            await member.send(embed=discord.Embed(description=f"**You have been unban from stuffs** | {reason}", color=0x0c8eeb))
-        except discord.Forbidden:
-            await self.bot.log(f"could not dm `{member}` during unban")
-
-    @unban.error
-    async def unban_error(self, ctx, error):
-        await self.check_error(ctx,error)
+    async def unban(self, ctx, member: str="None", *, reason="No reason provided"):
+        await self.moderate(ctx, "unban", member, reason)
 
     @commands.command()
-    async def kick(self, ctx, member: str, *, reason="No reason provided"):
-        member = await self.get_member(ctx, member)
-        if not member:
-            return
-        if not await self.check_perms(ctx, member):
-            return
-        
-        await member.kick(reason=reason)
-        await self.bot.log(f"`{member}` has been kicked because `{reason}` by `{ctx.author}`")
-
-        self.log_modcommand(
-            user_id=member.id,
-            action="kick",
-            reason=reason,
-            mod=ctx.author.id,
-            guild=ctx.guild.id
-        )
-
-        await ctx.send(embed=discord.Embed(description=f"✅ **{member.mention} has been KICKED** | {reason}", color=0x06700b))
-
-        try:
-            await member.send(embed=discord.Embed(description=f"**You have been kicked from stuffs** | {reason}", color=0x0c8eeb))
-        except discord.Forbidden:
-            await self.bot.log(f"could not dm `{member}` during kick")
-
-    @kick.error
-    async def kick_error(self, ctx, error):
-        await self.check_error(ctx,error)
+    async def kick(self, ctx, member: str="None", *, reason="No reason provided"):
+        await self.moderate(ctx, "kick", member, reason)
 
     @commands.command()
-    async def warn(self, ctx, member: str, *, reason="No reason provided"):
-        member = await self.get_member(ctx, member)
-        if not member:
-            return
-        if not await self.check_perms(ctx, member):
-            return
-             
-        await self.bot.log(f"`{member}` has been warned for `{reason}` by `{ctx.author}`")
-
-        self.log_modcommand(
-            user_id=member.id,
-            action="warn",
-            reason=reason,
-            mod=ctx.author.id,
-            guild=ctx.guild.id
-        )
-
-        embed=discord.Embed(description=f"✅ **{member.mention} has been WARNED** | {reason}", color=0x06700b)
-        await ctx.send(embed=embed)
-
-        try:
-            await member.send(embed=discord.Embed(description=f"**You have been warned in stuffs** | {reason}", color=0x0c8eeb))
-        except discord.Forbidden:
-            await self.bot.log(f"could not dm `{member}` during warn")
-
-    @warn.error
-    async def warn_error(self, ctx, error):
-        await self.check_error(ctx,error)
+    async def warn(self, ctx, member: str="None", *, reason="No reason provided"):
+        await self.moderate(ctx, "warn", member, reason)
 
     @commands.command()
-    async def mute(self, ctx):
-        await ctx.send("yeah your getting MUTED (imma code ts later)")
+    async def mute(self, ctx, member: str="None", *, reason="No reason provided"):
+        await self.moderate(ctx, "mute", member, reason)
 
 async def setup(bot):
     await bot.add_cog(AdminCommands(bot))
