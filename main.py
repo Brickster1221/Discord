@@ -110,11 +110,6 @@ async def constant_loop():
 
         await asyncio.sleep(300)
 
-@bot.command(name='h', aliases=[''])
-async def help_command(ctx, args):
-    embed=discord.Embed(title="List of commands", description="this is a full list of commands")
-    embed.add_field(name="i code later sorry")
-
 @bot.event
 async def on_member_join(member):
     if member.guild.id not in guild_specific:
@@ -122,6 +117,9 @@ async def on_member_join(member):
     if "welcome_channel" not in guild_specific[str(member.guild.id)]:
         return log_message("please put a `welcome_channel` id in your guild settings")
     channel = member.guild.get_channel(int(guild_specific[str(member.guild.id)]["welcome_channel"]))
+    if not channel:
+        return
+    
     messages = [f"{member.mention} has joined the server!!", f"Welcome {member.mention} to the server!!"]
     message = random.choice(messages)
     await channel.send(f"-> ({str(member.guild.member_count)}) {message}")

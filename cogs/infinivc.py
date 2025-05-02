@@ -3,6 +3,7 @@ from discord.ext import commands
 import time
 import json
 import os
+import re
 
 class infinivc(commands.Cog):
     def __init__(self, bot):
@@ -27,7 +28,6 @@ class infinivc(commands.Cog):
     def get_data(self, value, key='ChannelID'):
         value = str(value)
         return next((user for user, details in self.user_channels.items() if details.get(key) == value), None)
-
 
     async def update_data(self, user_id, value, type='ChannelID'):
         user_id = str(user_id)
@@ -87,7 +87,53 @@ class infinivc(commands.Cog):
             if state_channel:
                 user_id = self.get_data(state_channel.id)
                 if user_id in self.user_channels:
-                    await self.update_data(user_id, round(time.time()) + 48 * 60 * 60, 'TimeDel')
+                    if self.user_channels[user_id]['TimeDel'] < round(time.time()) + 48 * 60 * 60:
+                        await self.update_data(user_id, round(time.time()) + 48 * 60 * 60, 'TimeDel')
+
+    def parse_time(self, time_str):
+        match = re.match(r"(\d+)([dhm])", time_str.lower())
+        if not match:
+            return None
+
+        amount, unit = match.groups()
+        amount = int(amount)
+
+        if unit == "d":
+            return amount * 86400
+        elif unit == "h":
+            return amount * 3600
+        elif unit == "m":
+            return amount * 60
+        else:
+            return None
+
+    @commands.command()
+    async def infinivc(self, ctx, *, args):
+        user_id = self.get_data(ctx.channel.id, "ChannelID")
+        if not user_id:
+            await ctx.send(embed=discord.Embed(description="❌ You are not in a valid VC", color=0xcc182a))
+            return
+
+        split = args.split(" ", 1)  # Split into time and reason
+        arg = split[0]
+        if arg == "timer":
+            timmy = split[1]
+            duration = self.parse_time(timmy) if timmy else None
+            if duration > 30 * 24 * 60 * 60:
+                duration = 30 * 24 * 60 * 60 #sets max time to 30 days
+            if not duration:
+                timmy = None
+
+            if duration:
+                await self.update_data(user_id, round(time.time()) + duration, 'TimeDel')
+            else:
+                ctx.send(embed=discord.Embed(description="❌ Please input a vaild time value", color=0xcc182a))
+
+    @infinivc.error
+    async def error(self, ctx, error):
+        await self.bot.log(f"Unexpected errer during infinivc command, `{error}`")
+        await ctx.send(embed=discord.Embed(description="❌ an unexpected error occured", color=0xcc182a))
+        
 
 
 async def setup(bot):
