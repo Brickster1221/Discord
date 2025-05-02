@@ -9,19 +9,24 @@ class AdminCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    global mod_actions
-    if os.path.exists('mod_actions.json'):
-        try:
-            with open('mod_actions.json', "r") as file:
-                mod_actions = json.load(file)
-        except json.JSONDecodeError:
-            mod_actions = {}
-    else:
-        mod_actions = {}
+    def __init__(self, bot):
+        self.bot = bot
+        self.mod_actions = self.load_json("mod_actions.json")
+        self.guild_specific = self.load_json("guild_specific.json")
+
+    # INFINITE VC CHANNELS
+    def load_json(self, filename):
+        if os.path.exists(filename):
+            try:
+                with open(filename, "r") as file:
+                    return json.load(file)
+            except json.JSONDecodeError:
+                return {}
+        return {}
 
     def save_data(self):
         with open('mod_actions.json', "w") as file:
-            json.dump(mod_actions, file, indent=4)
+            json.dump(self.mod_actions, file, indent=4)
 
         # Update data on the Github
         """
@@ -52,11 +57,11 @@ class AdminCommands(commands.Cog):
             entry["duration"] = str(timeout)
 
         guild = str(guild)
-        if guild not in mod_actions:
-            mod_actions[guild] = {}
+        if guild not in self.mod_actions:
+            self.mod_actions[guild] = {}
 
-        numb = max(int(k) for k in mod_actions[guild].keys()) + 1
-        mod_actions[guild][str(numb)] = entry
+        numb = max(int(k) for k in self.mod_actions[guild].keys()) + 1
+        self.mod_actions[guild][str(numb)] = entry
         self.save_data()
 
     def parse_time(self, time_str):
@@ -89,14 +94,18 @@ class AdminCommands(commands.Cog):
         return None
 
     async def check_perms(self, ctx, member):
-        if ctx.author.id != 277243145081716736:
-            await ctx.send(embed=discord.Embed(description="❌ You don't have permission to use this command.", color=0xcc182a))
-            return False
-        elif member.top_role >= ctx.author.top_role and ctx.author != ctx.guild.owner:
-            await ctx.send(embed=discord.Embed(description="❌ You cant ban someone with a higher or equal role to you", color=0xcc182a))
-            return False
-        else:
+        if ctx.author == ctx.guild.owner:
             return True
+        has_role = discord.utils.get(ctx.author.roles, id=int(self.guild_specific[str(ctx.guild.id)]["moderator_role_id"]))
+        if has_role:
+            return True
+        if member:
+            if member.top_role >= ctx.author.top_role and ctx.author != ctx.guild.owner:
+                await ctx.send(embed=discord.Embed(description="❌ You cant ban someone with a higher or equal role to you", color=0xcc182a))
+                return False
+        
+        await ctx.send(embed=discord.Embed(description="❌ You don't have permission to use this command.", color=0xcc182a))
+        return False
     
     @commands.command()
     async def modlog(self, ctx, member: str="None"):
@@ -106,7 +115,7 @@ class AdminCommands(commands.Cog):
         
         casefound = 0
         embed=discord.Embed(title=f"Mod actions against {member}", color=0x0c8eeb)
-        for id, case in mod_actions[str(ctx.guild.id)].items():
+        for id, case in self.mod_actions[str(ctx.guild.id)].items():
             if int(case['user_id']) == member.id:
                 casefound += 1
                 moderator = await ctx.guild.fetch_member(int(case['moderator_id']))
@@ -191,7 +200,7 @@ class AdminCommands(commands.Cog):
                 f"✅ **{member.mention} has been {funny}** | {reason}"), color=0x06700b)
             await ctx.send(embed=embed)
         except Exception as e:
-            await self.bot.log(f"Unknown error occured while taking action on a member: {e}")
+            await self.bot.log(f"Unknown error occured while taking action on a member: `{e}`")
             return await ctx.send(embed=discord.Embed(description=f"❌ An unexpected error has occured.", color=0xcc182a))
     
     @commands.command()
