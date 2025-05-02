@@ -12,7 +12,7 @@ intents.voice_states = True
 intents.guilds = True
 intents.members = True
 intents.message_content = True
-bot = commands.Bot(command_prefix="?", intents=intents)
+bot = commands.Bot(command_prefix="?", intents=intents, help_command=None)
 
 async def log_message(message, guild=1034558177510961182):
     timestamp = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
@@ -119,7 +119,7 @@ async def on_member_join(member):
     channel = member.guild.get_channel(int(guild_specific[str(member.guild.id)]["welcome_channel"]))
     if not channel:
         return
-    
+
     messages = [f"{member.mention} has joined the server!!", f"Welcome {member.mention} to the server!!"]
     message = random.choice(messages)
     await channel.send(f"-> ({str(member.guild.member_count)}) {message}")
@@ -172,6 +172,21 @@ async def repeat(ctx, *, text: str):
         await ctx.send(text, reference=replied_message)
     else:
         await ctx.send(text)
+
+@bot.command(name='help', aliases=[''])
+async def help(ctx, args):
+    if args == "moderation":
+        embed = discord.Embed(title="List of moderation commands", color=0xcc182a)
+
+        await ctx.send(embed=embed)
+    else:
+        embed=discord.Embed(title="List of commands", color=0xcc182a)
+        embed.add_field(name="?help", value="displays a list of helpful commands", inline=True)
+        embed.add_field(name="?repeat", value="makes the bot repeat what you type, use `-del` to automatically delete your message after", inline=True)
+        embed.add_field(name="?infinivc", value="use ?help infinivc for more information", inline=True)
+        embed.add_field(name="moderation commands", value="use ?help moderation for more information", inline=True)
+        await ctx.send(embed=embed)
+    ctx.send("Currently in development")
 
 with open('secret.json') as f:
     secret = json.load(f)
