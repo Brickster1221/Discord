@@ -97,12 +97,12 @@ class AdminCommands(commands.Cog):
         if ctx.author == ctx.guild.owner:
             return True
         has_role = discord.utils.get(ctx.author.roles, id=int(self.guild_specific[str(ctx.guild.id)]["moderator_role_id"]))
+        if member and has_role:
+            if member.top_role >= ctx.author.top_role and ctx.author != ctx.guild.owner:
+                await ctx.send(embed=discord.Embed(description="❌ You cant do that to someone with a higher or equal role to you", color=0xcc182a))
+                return False
         if has_role:
             return True
-        if member:
-            if member.top_role >= ctx.author.top_role and ctx.author != ctx.guild.owner:
-                await ctx.send(embed=discord.Embed(description="❌ You cant ban someone with a higher or equal role to you", color=0xcc182a))
-                return False
         
         await ctx.send(embed=discord.Embed(description="❌ You don't have permission to use this command.", color=0xcc182a))
         return False
