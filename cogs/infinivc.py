@@ -76,9 +76,7 @@ class infinivc(commands.Cog):
                 )
 
                 await self.bot.log(f"`{member}` has created a voice channel")
-                embed=discord.Embed(title="Temp VC", description=f"Channel created by `{member}`")
-                embed.add_field(name="Commands", value="`?infinivc timer 1d/1h/1m` will set the vc to delete at the time you choose")
-                await temp_channel.send(embed=embed)
+                await temp_channel.send(embed=discord.Embed(title="Temp VC", description=f"Channel created by `{member}`\ntype `?help infinivc` to see commands", color=0x0c8eeb))
                 message = await temp_channel.send(f"Channel will be deleted eventualy")
                 await self.update_data(member.id, temp_channel.id, 'ChannelID')
                 await self.update_data(member.id, message.id, 'MessageID')
@@ -130,7 +128,16 @@ class infinivc(commands.Cog):
                 await self.update_data(user_id, round(time.time()) + duration, 'TimeDel')
                 await ctx.send(f"This vc will now be deleted <t:{round(time.time()) + duration}:R>")
             else:
-                ctx.send(embed=discord.Embed(description="❌ Please input a vaild time value", color=0xcc182a))
+                await ctx.send(embed=discord.Embed(description="❌ Please input a vaild time value", color=0xcc182a))
+        elif arg == "delete":
+            if ctx.author.id == int(user_id):
+                await ctx.channel.delete()
+            else:
+                await ctx.send(embed=discord.Embed(description="❌ You do not own this VC", color=0xcc182a))
+        elif arg == "info":
+            await ctx.send(embed=discord.Embed(title=ctx.channel.name, description=f"VC created by <@{user_id}>\nVC will be deleted in <t:{self.user_channels[user_id]['TimeDel']}:R>", color=0x0c8eeb))
+        else:
+            await ctx.send(embed=discord.Embed(description="❌ Not a valid argument, type `?help infinivc` to see valid arguments", color=0xcc182a))
 
     @infinivc.error
     async def error(self, ctx, error):

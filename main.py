@@ -176,15 +176,21 @@ async def repeat(ctx, *, text: str):
 @bot.command(name='help', aliases=[''])
 async def help(ctx, args=""):
     if args == "moderation":
-        embed = discord.Embed(title="List of moderation commands", color=0xcc182a)
+        embed = discord.Embed(title="List of moderation commands", color=0x0c8eeb)
 
         await ctx.send(embed=embed)
+    elif args == "infinivc":
+        embed = discord.Embed(title="List of infinivc commands", description="These can only be used in infinivc channels", color=0x0c8eeb)
+        embed.add_field(name="?infinivc timer", value="typing the argument, 1d/1h/1m will set the vc to delete at the time you choose", inline=True)
+        embed.add_field(name="?infinivc info", value="This will display info about the current vc you are tpying the command in", inline=True)
+        embed.add_field(name="?infinivc delete", value="This will delete the channel if you are the owner of it", inline=True)
+        await ctx.send(embed=embed)
     else:
-        embed=discord.Embed(title="List of commands", color=0xcc182a)
+        embed=discord.Embed(title="List of commands", color=0x0c8eeb)
         embed.add_field(name="?help", value="displays a list of helpful commands", inline=True)
         embed.add_field(name="?repeat", value="makes the bot repeat what you type, use `-del` to automatically delete your message after", inline=True)
-        embed.add_field(name="?infinivc", value="use ?help infinivc for more information", inline=True)
-        embed.add_field(name="moderation commands", value="use ?help moderation for more information", inline=True)
+        embed.add_field(name="?infinivc", value="use `?help infinivc` for more information", inline=True)
+        embed.add_field(name="moderation commands", value="use `?help moderation` for more information", inline=True)
         await ctx.send(embed=embed)
     await ctx.send("Currently in development")
 
