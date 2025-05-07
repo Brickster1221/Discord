@@ -174,7 +174,7 @@ async def repeat(ctx, *, text: str):
         await ctx.send(text)
 
 @bot.command(name='help', aliases=[''])
-async def help(ctx, args):
+async def help(ctx, args=""):
     if args == "moderation":
         embed = discord.Embed(title="List of moderation commands", color=0xcc182a)
 
@@ -186,7 +186,7 @@ async def help(ctx, args):
         embed.add_field(name="?infinivc", value="use ?help infinivc for more information", inline=True)
         embed.add_field(name="moderation commands", value="use ?help moderation for more information", inline=True)
         await ctx.send(embed=embed)
-    ctx.send("Currently in development")
+    await ctx.send("Currently in development")
 
 with open('secret.json') as f:
     secret = json.load(f)

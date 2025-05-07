@@ -41,8 +41,7 @@ class infinivc(commands.Cog):
             channel = self.bot.get_channel(int(self.user_channels[user_id]['ChannelID']))
             try:
                 message = await channel.fetch_message(self.user_channels[user_id]['MessageID'])
-                user = await self.bot.fetch_user(user_id)
-                await message.edit(content=f"Voice channel created by: `{user}`\nChannel will be deleted in <t:{value}:R>")
+                await message.edit(content=f"Channel will be deleted in <t:{value}:R>")
             except:
                 pass
 
@@ -77,7 +76,10 @@ class infinivc(commands.Cog):
                 )
 
                 await self.bot.log(f"`{member}` has created a voice channel")
-                message = await temp_channel.send(f"Voice Channel created by: `{member}`")
+                embed=discord.Embed(title="Temp VC", description=f"Channel created by `{member}`")
+                embed.add_field(name="Commands", value="`?infinivc timer 1d/1h/1m` will set the vc to delete at the time you choose")
+                await temp_channel.send(embed=embed)
+                message = await temp_channel.send(f"Channel will be deleted eventualy")
                 await self.update_data(member.id, temp_channel.id, 'ChannelID')
                 await self.update_data(member.id, message.id, 'MessageID')
                 await self.update_data(member.id,round(time.time()) + 36 * 60 * 60, 'TimeDel')
@@ -87,7 +89,7 @@ class infinivc(commands.Cog):
             if state_channel:
                 user_id = self.get_data(state_channel.id)
                 if user_id in self.user_channels:
-                    if self.user_channels[user_id]['TimeDel'] < round(time.time()) + 36 * 60 * 60:
+                    if int(self.user_channels[user_id]['TimeDel']) < round(time.time()) + 35 * 60 * 60:
                         await self.update_data(user_id, round(time.time()) + 36 * 60 * 60, 'TimeDel')
 
     def parse_time(self, time_str):
@@ -126,6 +128,7 @@ class infinivc(commands.Cog):
 
             if duration:
                 await self.update_data(user_id, round(time.time()) + duration, 'TimeDel')
+                await ctx.send(f"This vc will now be deleted <t:{round(time.time()) + duration}:R>")
             else:
                 ctx.send(embed=discord.Embed(description="❌ Please input a vaild time value", color=0xcc182a))
 
