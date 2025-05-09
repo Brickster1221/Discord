@@ -6,6 +6,20 @@
             "timestamp": "1745802223",
             "reason": "bye nerd",
             "moderator_id": "277243145081716736"
+        },
+        "2": {
+            "user_id": "760875587841294406",
+            "action": "ban",
+            "timestamp": "1746762825",
+            "reason": "No reason provided",
+            "moderator_id": "277243145081716736"
+        },
+        "3": {
+            "user_id": "760875587841294406",
+            "action": "unban",
+            "timestamp": "1746764412",
+            "reason": "No reason provided",
+            "moderator_id": "277243145081716736"
         }
     }
 }

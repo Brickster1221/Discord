@@ -86,8 +86,7 @@ class AdminCommands(commands.Cog):
             return await commands.MemberConverter().convert(ctx, member)
         except commands.BadArgument:
             try:
-                user_id = int(member)
-                return ctx.guild.get_member(user_id) or await ctx.guild.fetch_member(user_id)
+                return await self.bot.fetch_user(int(member))
             except (ValueError, discord.NotFound):
                 pass
         await ctx.send(embed=discord.Embed(description="❌ Could not find a user with that ID or mention.", color=0xcc182a))
@@ -185,6 +184,8 @@ class AdminCommands(commands.Cog):
                 embed=discord.Embed(description=dm_msg, color=0x0c8eeb)
                 if action == "ban":
                     embed.set_footer(text="If you felt that this ban was unfair, please us our unban form, linklinklinklinklinklink")
+                if action == "unban":
+                    embed.add_field(value="Heres an invite to join back, https://discord.gg/9qBNfF5hHP")
                 await member.send(embed=embed)
             except discord.Forbidden:
                 await self.bot.log(f"could not dm `{member}` during {action}")

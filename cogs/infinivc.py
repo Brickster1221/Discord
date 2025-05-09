@@ -80,15 +80,15 @@ class infinivc(commands.Cog):
                 message = await temp_channel.send(f"Channel will be deleted eventualy")
                 await self.update_data(member.id, temp_channel.id, 'ChannelID')
                 await self.update_data(member.id, message.id, 'MessageID')
-                await self.update_data(member.id,round(time.time()) + 36 * 60 * 60, 'TimeDel')
+                await self.update_data(member.id,round(time.time()) + 48 * 60 * 60, 'TimeDel')
                 await member.move_to(temp_channel)
 
         for state_channel in [after.channel, before.channel]:
             if state_channel:
                 user_id = self.get_data(state_channel.id)
                 if user_id in self.user_channels:
-                    if int(self.user_channels[user_id]['TimeDel']) < round(time.time()) + 35 * 60 * 60:
-                        await self.update_data(user_id, round(time.time()) + 36 * 60 * 60, 'TimeDel')
+                    if int(self.user_channels[user_id]['TimeDel']) < round(time.time()) + 47 * 60 * 60:
+                        await self.update_data(user_id, round(time.time()) + 48 * 60 * 60, 'TimeDel')
 
     def parse_time(self, time_str):
         match = re.match(r"(\d+)([dhm])", time_str.lower())

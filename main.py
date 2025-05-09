@@ -112,7 +112,7 @@ async def constant_loop():
 
 @bot.event
 async def on_member_join(member):
-    if member.guild.id not in guild_specific:
+    if str(member.guild.id) not in guild_specific:
         return log_message("please put your guild id in guild_specific.json")
     if "welcome_channel" not in guild_specific[str(member.guild.id)]:
         return log_message("please put a `welcome_channel` id in your guild settings")
@@ -129,7 +129,7 @@ async def on_member_join(member):
 
 @bot.event
 async def on_member_remove(member):
-    if member.guild.id not in guild_specific:
+    if str(member.guild.id) not in guild_specific:
         return await log_message("please put your guild id in guild_specific.json")
     if "welcome_channel" not in guild_specific[str(member.guild.id)]:
         return await log_message("please put a `welcome_channel` id in your guild settings")
@@ -193,6 +193,17 @@ async def help(ctx, args=""):
         embed.add_field(name="moderation commands", value="use `?help moderation` for more information", inline=True)
         await ctx.send(embed=embed)
     await ctx.send("Currently in development")
+
+@bot.command()
+async def test(ctx, user_id: int):
+    try:
+        user = await bot.fetch_user(user_id)
+        await ctx.send(f"Found user: {user.name}")
+        await user.send("Hello")
+    except discord.NotFound:
+        await ctx.send("User not found.")
+    except discord.HTTPException:
+        await ctx.send("Failed to fetch user due to an HTTP error.")
 
 with open('secret.json') as f:
     secret = json.load(f)
