@@ -135,7 +135,7 @@ class infinivc(commands.Cog):
             else:
                 await ctx.send(embed=discord.Embed(description="❌ You do not own this VC", color=0xcc182a))
         elif arg == "info":
-            await ctx.send(embed=discord.Embed(title=ctx.channel.name, description=f"VC created by <@{user_id}>\nVC will be deleted in <t:{self.user_channels[user_id]['TimeDel']}:R>", color=0x0c8eeb))
+            await ctx.send(embed=discord.Embed(title=ctx.channel.name, description=f"VC created by <@{user_id}>\nVC will be deleted <t:{self.user_channels[user_id]['TimeDel']}:R>", color=0x0c8eeb))
         else:
             await ctx.send(embed=discord.Embed(description="❌ Not a valid argument, type `?help infinivc` to see valid arguments", color=0xcc182a))
 

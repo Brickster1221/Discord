@@ -147,21 +147,6 @@ class AdminCommands(commands.Cog):
             if not duration:
                 time = None
 
-            if action == "ban":
-                await member.ban(reason=reason)
-                await self.bot.log(f"`{member}` has been banned for `{time}` because `{reason}` by `{ctx.author}`")
-            elif action == "unban":
-                await ctx.guild.unban(member)
-                await self.bot.log(f"`{member}` has been unbanned for `{reason}` by `{ctx.author}`")
-            elif action == "kick":
-                await member.kick(reason=reason)
-                await self.bot.log(f"`{member}` has been kicked for `{reason}` by `{ctx.author}`")
-            elif action == "warn":
-                await self.bot.log(f"`{member}` has been warned for `{reason}` by `{ctx.author}`")
-            elif action == "mute":
-                ctx.send("command not finished yet, sorry!")
-                return
-
             timeout = round(time.time()) + duration if duration else None
 
             self.log_modcommand(
@@ -183,7 +168,7 @@ class AdminCommands(commands.Cog):
             try:
                 embed=discord.Embed(description=dm_msg, color=0x0c8eeb)
                 if action == "ban":
-                    embed.set_footer(text="If you felt that this ban was unfair, please us our unban form, linklinklinklinklinklink")
+                    embed.set_footer(text="If you felt that this ban was unfair, please us our unban form, https://forms.gle/efkNy4J9rBsufURVA")
                 if action == "unban":
                     embed.add_field(value="Heres an invite to join back, https://discord.gg/9qBNfF5hHP")
                 await member.send(embed=embed)
@@ -200,6 +185,21 @@ class AdminCommands(commands.Cog):
             embed=discord.Embed(description=(
                 f"✅ **{member.mention} has been {funny}** | {reason}"), color=0x06700b)
             await ctx.send(embed=embed)
+
+            if action == "ban":
+                await member.ban(reason=reason)
+                await self.bot.log(f"`{member}` has been banned for `{time}` because `{reason}` by `{ctx.author}`")
+            elif action == "unban":
+                await ctx.guild.unban(member)
+                await self.bot.log(f"`{member}` has been unbanned for `{reason}` by `{ctx.author}`")
+            elif action == "kick":
+                await member.kick(reason=reason)
+                await self.bot.log(f"`{member}` has been kicked for `{reason}` by `{ctx.author}`")
+            elif action == "warn":
+                await self.bot.log(f"`{member}` has been warned for `{reason}` by `{ctx.author}`")
+            elif action == "mute":
+                ctx.send("command not finished yet, sorry!")
+                return
         except Exception as e:
             await self.bot.log(f"Unknown error occured while taking action on a member: `{e}`")
             return await ctx.send(embed=discord.Embed(description=f"❌ An unexpected error has occured.", color=0xcc182a))
@@ -220,9 +220,9 @@ class AdminCommands(commands.Cog):
     async def warn(self, ctx, member: str="None", *, reason="No reason provided"):
         await self.moderate(ctx, "warn", member, reason)
 
-    @commands.command()
-    async def mute(self, ctx, member: str="None", *, reason="No reason provided"):
-        await self.moderate(ctx, "mute", member, reason)
+    #@commands.command()
+    #async def mute(self, ctx, member: str="None", *, reason="No reason provided"):
+    #    await self.moderate(ctx, "mute", member, reason)
 
 async def setup(bot):
     await bot.add_cog(AdminCommands(bot))

@@ -37,35 +37,18 @@ async def on_message(message):
 
 
 def load_data():
-    global user_channels
-    global mod_actions
-    global guild_specific
-    if os.path.exists('user_channels.json'):
-        try:
-            with open('user_channels.json', "r") as file:
-                user_channels = json.load(file)
-        except json.JSONDecodeError:
-            user_channels = {}
-    else:
-        user_channels = {}
+    global user_channels; user_channels = load_json("user_channels.json")
+    global mod_actions; mod_actions = load_json("mod_actions.json")
+    global guild_specific; guild_specific = load_json("guild_specific.json")
 
-    if os.path.exists('mod_actions.json'):
+def load_json(filename):
+    if os.path.exists(filename):
         try:
-            with open('mod_actions.json', "r") as file:
-                mod_actions = json.load(file)
+            with open(filename, "r") as file:
+                return json.load(file)
         except json.JSONDecodeError:
-            mod_actions = {}
-    else:
-        mod_actions = {}
-
-    if os.path.exists('guild_specific.json'):
-        try:
-            with open('guild_specific.json', "r") as file:
-                guild_specific = json.load(file)
-        except json.JSONDecodeError:
-            guild_specific = {}
-    else:
-        guild_specific = {}
+            return {}
+    return {}
 
 def save_data():
     with open('user_channels.json', "w") as file:
