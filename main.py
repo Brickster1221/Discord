@@ -34,6 +34,9 @@ async def on_ready():
 @bot.event
 async def on_message(message):
     await bot.process_commands(message)
+    text = message.content.lower()
+    if "job" in text or "employ" in text or "employed" in text:
+        await message.channel.send("DONT SAY THAT WORD", reference=message)
 
 
 def load_data():
@@ -160,7 +163,11 @@ async def repeat(ctx, *, text: str):
 async def help(ctx, args=""):
     if args == "moderation":
         embed = discord.Embed(title="List of moderation commands", color=0x0c8eeb)
-
+        embed.add_field(name="?ban", value="bans a member from the server, using something like 1d/1h/1m will set them to be unbanned in that time", inline=True)
+        embed.add_field(name="?unban", value="unbans a member", inline=True)
+        embed.add_field(name="?mute", value="mutes a member by making them only be able to access one channel", inline=True)
+        embed.add_field(name="?kick", value="kicks a member from the server", inline=True)
+        embed.add_field(name="?warn", value="warns a member, useful for seeing what they have done in the past", inline=True)
         await ctx.send(embed=embed)
     elif args == "infinivc":
         embed = discord.Embed(title="List of infinivc commands", description="These can only be used in infinivc channels", color=0x0c8eeb)
@@ -172,10 +179,9 @@ async def help(ctx, args=""):
         embed=discord.Embed(title="List of commands", color=0x0c8eeb)
         embed.add_field(name="?help", value="displays a list of helpful commands", inline=True)
         embed.add_field(name="?repeat", value="makes the bot repeat what you type, use `-del` to automatically delete your message after", inline=True)
-        embed.add_field(name="?infinivc", value="use `?help infinivc` for more information", inline=True)
+        embed.add_field(name="infinivc commands", value="use `?help infinivc` for more information", inline=True)
         embed.add_field(name="moderation commands", value="use `?help moderation` for more information", inline=True)
         await ctx.send(embed=embed)
-    await ctx.send("Currently in development")
 
 @bot.command()
 async def test(ctx, user_id: int):
