@@ -55,7 +55,8 @@ class infinivc(commands.Cog):
         if after.channel and guild in self.guild_specific:
             if after.channel.id == int(self.guild_specific[guild]["infinivc_channel"]):
                 category = member.guild.get_channel(int(self.guild_specific[guild]["infinivc_category"]))
-                existing = self.user_channels.get(str(member.id))
+                try: existing = member.guild.get_channel(int(self.user_channels[str(member.id)]['ChannelID'])) 
+                except Exception as e: existing = None
                 if existing:
                     await member.move_to(existing)
                     return
