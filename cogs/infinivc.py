@@ -10,6 +10,7 @@ class infinivc(commands.Cog):
         self.bot = bot
         self.user_channels = self.load_json("user_channels.json")
         self.guild_specific = self.load_json("guild_specific.json")
+        self.defaultTime = 48*60*60
 
     # INFINITE VC CHANNELS
     def load_json(self, filename):
@@ -47,11 +48,11 @@ class infinivc(commands.Cog):
 
         self.save_data()
 
-
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
         guild = str(member.guild.id)
         # Check if a member joined the specific VC
+
         if after.channel and guild in self.guild_specific:
             if after.channel.id == int(self.guild_specific[guild]["infinivc_channel"]):
                 category = member.guild.get_channel(int(self.guild_specific[guild]["infinivc_category"]))
@@ -60,8 +61,8 @@ class infinivc(commands.Cog):
                 if existing:
                     await member.move_to(existing)
                     return
-                #else:
-                    #self.user_channels[str(member.id)]['ChannelID'] = ""
+                else:
+                    await self.update_data(member.id, self.guild_specific[guild]["infinivc_channel"], 'ChannelID') #tries to stop duping channels
 
                 # Create a temporary voice channel
                 overwrites = {
@@ -81,15 +82,15 @@ class infinivc(commands.Cog):
                 message = await temp_channel.send(f"Channel will be deleted eventualy")
                 await self.update_data(member.id, temp_channel.id, 'ChannelID')
                 await self.update_data(member.id, message.id, 'MessageID')
-                await self.update_data(member.id,round(time.time()) + 48 * 60 * 60, 'TimeDel')
+                await self.update_data(member.id,round(time.time()) + self.defaultTime, 'TimeDel')
                 await member.move_to(temp_channel)
 
         for state_channel in [after.channel, before.channel]:
             if state_channel:
                 user_id = self.get_data(state_channel.id)
                 if user_id in self.user_channels:
-                    if int(self.user_channels[user_id]['TimeDel']) < round(time.time()) + 47 * 60 * 60:
-                        await self.update_data(user_id, round(time.time()) + 48 * 60 * 60, 'TimeDel')
+                    if int(self.user_channels[user_id]['TimeDel']) < round(time.time()) + self.defaultTime - 1*60*60: #prevents getting rate limited
+                        await self.update_data(user_id, round(time.time()) + self.defaultTime, 'TimeDel')
 
     def parse_time(self, time_str):
         match = re.match(r"(\d+)([dhm])", time_str.lower())
@@ -114,14 +115,18 @@ class infinivc(commands.Cog):
         if not user_id:
             await ctx.send(embed=discord.Embed(description="❌ You are not in a valid VC", color=0xcc182a))
             return
+        has_role = discord.utils.get(ctx.author.roles, id=int(self.guild_specific[str(ctx.guild.id)]["moderator_role_id"]))
 
         split = args.split(" ", 1)  # Split into time and reason
         arg = split[0]
         if arg == "timer":
             timmy = split[1]
             duration = self.parse_time(timmy) if timmy else None
-            if duration > 30 * 24 * 60 * 60:
+            if duration > 30 * 24 * 60 * 60 and not has_role:
                 duration = 30 * 24 * 60 * 60 #sets max time to 30 days
+            if (duration < self.defaultTime and ctx.author.id != int(user_id)) and not has_role:
+                duration = self.defaultTime
+                await ctx.send("You cannot go below the default time if you do not own this vc")
             if not duration:
                 timmy = None
 
@@ -131,7 +136,7 @@ class infinivc(commands.Cog):
             else:
                 await ctx.send(embed=discord.Embed(description="❌ Please input a vaild time value", color=0xcc182a))
         elif arg == "delete":
-            if ctx.author.id == int(user_id):
+            if ctx.author.id == int(user_id) or has_role:
                 await ctx.channel.delete()
             else:
                 await ctx.send(embed=discord.Embed(description="❌ You do not own this VC", color=0xcc182a))

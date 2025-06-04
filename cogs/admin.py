@@ -4,6 +4,7 @@ import time
 import json
 import os
 import re
+from datetime import timedelta
 
 class AdminCommands(commands.Cog):
     def __init__(self, bot):
@@ -171,7 +172,8 @@ class AdminCommands(commands.Cog):
                     embed.set_footer(text="If you felt that this ban was unfair, please us our unban form, https://forms.gle/efkNy4J9rBsufURVA")
                 if action == "unban":
                     embed.add_field(value="Heres an invite to join back, https://discord.gg/9qBNfF5hHP")
-                await member.send(embed=embed)
+                if action != "timeout":
+                    await member.send(embed=embed)
             except discord.Forbidden:
                 await self.bot.log(f"could not dm `{member}` during {action}")
 
@@ -179,7 +181,8 @@ class AdminCommands(commands.Cog):
                 "ban": f"BANNED for {time}" if time else f"BANNED",
                 "unban": f"UNBANNED",
                 "kick": f"KICKED",
-                "warn": f"WARNED"
+                "warn": f"WARNED",
+                "timeout": f"MUTED"
             }[action]
 
             embed=discord.Embed(description=(
@@ -197,9 +200,9 @@ class AdminCommands(commands.Cog):
                 await self.bot.log(f"`{member}` has been kicked for `{reason}` by `{ctx.author}`")
             elif action == "warn":
                 await self.bot.log(f"`{member}` has been warned for `{reason}` by `{ctx.author}`")
-            elif action == "mute":
-                ctx.send("command not finished yet, sorry!")
-                return
+            elif action == "timeout":
+                await member.timeout(timedelta(seconds=duration), reason=reason)
+                await self.bot.log(f"`{member}` has been timed out for `{time}` because `{reason}` by `{ctx.author}`")
         except Exception as e:
             await self.bot.log(f"Unknown error occured while taking action on a member: `{e}`")
             return await ctx.send(embed=discord.Embed(description=f"❌ An unexpected error has occured.", color=0xcc182a))
@@ -220,9 +223,9 @@ class AdminCommands(commands.Cog):
     async def warn(self, ctx, member: str="None", *, reason="No reason provided"):
         await self.moderate(ctx, "warn", member, reason)
 
-    #@commands.command()
-    #async def mute(self, ctx, member: str="None", *, reason="No reason provided"):
-    #    await self.moderate(ctx, "mute", member, reason)
+    @commands.command()
+    async def timeout(self, ctx, member: str="None", *, reason="No reason provided"):
+        await self.moderate(ctx, "timeout", member, reason)
 
 async def setup(bot):
     await bot.add_cog(AdminCommands(bot))

@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import asyncio
 import time
 import json
@@ -13,6 +13,9 @@ intents.guilds = True
 intents.members = True
 intents.message_content = True
 bot = commands.Bot(command_prefix="?", intents=intents, help_command=None)
+
+with open('secret.json') as f:
+    secret = json.load(f)
 
 async def log_message(message, guild=1034558177510961182):
     timestamp = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
@@ -35,9 +38,10 @@ async def on_ready():
 async def on_message(message):
     await bot.process_commands(message)
     text = message.content.lower()
-    if "job" in text or "employ" in text or "employed" in text:
+    if "job" in text:
         await message.channel.send("DONT SAY THAT WORD", reference=message)
-
+        await message.author.timeout(timedelta(seconds=3), reason="said the j slur")
+        await log_message(f"{message.author} said the j slur :sob:")
 
 def load_data():
     global user_channels; user_channels = load_json("user_channels.json")
@@ -106,9 +110,10 @@ async def on_member_join(member):
     if not channel:
         return
 
-    messages = [f"{member.mention} has joined the server!!", f"Welcome {member.mention} to the server!!"]
+    messages = [f"{member.mention} has joined the server!!", f"Welcome {member.mention} to the server!!",
+                f"{member.mention} arrived!!"]
     message = random.choice(messages)
-    await channel.send(f"-> ({str(member.guild.member_count)}) {message}")
+    await channel.send(f"-> ({str(member.guild.member_count)}) {message}\n-# ({member.name})")
 
     role = discord.utils.get(member.guild.roles, name="hi")
     await member.add_roles(role)
@@ -136,9 +141,10 @@ async def on_member_remove(member):
     
     messages = [f"{member.mention} has left the server >:C"]
     message = random.choice(messages)
-    if duration:
+    if  duration:
         message = f"{message}, they were here for {duration}"
-    await channel.send(f"<- ({str(member.guild.member_count)}) {message}")
+
+    await channel.send(f"<- ({str(member.guild.member_count)}) {message}\n-# ({member.name})")
 
 
 @bot.command()
@@ -184,18 +190,8 @@ async def help(ctx, args=""):
         await ctx.send(embed=embed)
 
 @bot.command()
-async def test(ctx, user_id: int):
-    try:
-        user = await bot.fetch_user(user_id)
-        await ctx.send(f"Found user: {user.name}")
-        await user.send("Hello")
-    except discord.NotFound:
-        await ctx.send("User not found.")
-    except discord.HTTPException:
-        await ctx.send("Failed to fetch user due to an HTTP error.")
-
-with open('secret.json') as f:
-    secret = json.load(f)
+async def test(ctx):
+    await ctx.channel.send(f"<- ({str(ctx.guild.member_count)}) {ctx}\n-# ({ctx.author})")
 
 token = secret["token"]
 bot.run(token)
