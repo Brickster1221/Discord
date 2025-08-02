@@ -111,7 +111,8 @@ async def on_member_join(member):
         return
 
     messages = [f"{member.mention} has joined the server!!", f"Welcome {member.mention} to the server!!",
-                f"{member.mention} arrived!!"]
+                f"{member.mention} arrived!!", f"{member.mention} just showed up!!", f"Yay you made it {member.mention}!!",
+                f"{member.mention} joined the party!!"]
     message = random.choice(messages)
     await channel.send(f"-> ({str(member.guild.member_count)}) {message}\n-# ({member.name})")
 
@@ -146,6 +147,15 @@ async def on_member_remove(member):
 
     await channel.send(f"<- ({str(member.guild.member_count)}) {message}\n-# ({member.name})")
 
+#sends a message in vc when someone joins/leaves
+@bot.event
+async def on_voice_state_update(member, before, after):
+    if before.channel == after.channel:
+        return
+    if before.channel:
+        await before.channel.send(f"<t:{round(time.time())}:T> {member} left")
+    if after.channel:
+        await after.channel.send(f"<t:{round(time.time())}:T> {member} joined")
 
 @bot.command()
 async def repeat(ctx, *, text: str):
