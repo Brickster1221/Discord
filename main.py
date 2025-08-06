@@ -17,10 +17,25 @@ bot = commands.Bot(command_prefix="?", intents=intents, help_command=None)
 with open('secret.json') as f:
     secret = json.load(f)
 
+bot.data = {}
+def load_data():
+    if os.path.exists('data.json'):
+        try:
+            with open('data.json', "r") as file:
+                bot.data = json.load(file)
+        except json.JSONDecodeError:
+            bot.data = {}
+
+def save_data():
+    with open('data.json', "w") as file:
+        json.dump(bot.data, file, indent=4)
+bot.save = save_data
+load_data()
+
 async def log_message(message, guild=1034558177510961182):
     timestamp = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
     print(f"{timestamp} {message}")
-    channel = bot.get_channel(int(guild_specific[str(guild)]["log_channel"]))
+    channel = bot.get_channel(int(bot.data["guild_specific"][str(guild)]["log_channel"]))
     if channel:
         await channel.send(
             f"<t:{round(time.time())}> (<t:{round(time.time())}:R>) {message}")
@@ -43,45 +58,24 @@ async def on_message(message):
         await message.author.timeout(timedelta(seconds=3), reason="said the j slur")
         await log_message(f"{message.author} said the j slur :sob:")
 
-def load_data():
-    global user_channels; user_channels = load_json("user_channels.json")
-    global mod_actions; mod_actions = load_json("mod_actions.json")
-    global guild_specific; guild_specific = load_json("guild_specific.json")
-
-def load_json(filename):
-    if os.path.exists(filename):
-        try:
-            with open(filename, "r") as file:
-                return json.load(file)
-        except json.JSONDecodeError:
-            return {}
-    return {}
-
-def save_data():
-    with open('user_channels.json', "w") as file:
-        json.dump(user_channels, file, indent=4)
-load_data()
-
 async def constant_loop():
     while True:
         load_data()
         IDS = []
-        for ID in user_channels:
-            channel_id = int(user_channels[ID]['ChannelID'])
+        for ID in bot.data["user_channels"]:
+            channel_id = int(bot.data["user_channels"][ID]['ChannelID'])
             channel = bot.get_channel(channel_id)
             user = await bot.fetch_user(ID)
-            if channel and len(channel.members) == 0 and channel.guild and time.time() > int(user_channels[ID]['TimeDel']):
+            if channel and len(channel.members) == 0 and channel.guild and time.time() > int(bot.data["user_channels"][ID]['TimeDel']):
                 IDS.append(ID)
                 await channel.delete()
-                #del user_channels[ID]
-                #save_data()
                 await log_message(f"personal vc belonging `{user}` has been deleted to due timer running out")
             if not channel:
                 IDS.append(ID)
                 await log_message(f"personal vc belonging to `{user}` has been deleted to due it no longer existing")
         if len(IDS) > 0:
             for ID in IDS:
-                del user_channels[ID]
+                del bot.data["user_channels"][ID]
             save_data()
         
         """
@@ -102,11 +96,11 @@ async def constant_loop():
 
 @bot.event
 async def on_member_join(member):
-    if str(member.guild.id) not in guild_specific:
+    if str(member.guild.id) not in bot.data["guild_specific"]:
         return log_message("please put your guild id in guild_specific.json")
-    if "welcome_channel" not in guild_specific[str(member.guild.id)]:
+    if "welcome_channel" not in bot.data["guild_specific"][str(member.guild.id)]:
         return log_message("please put a `welcome_channel` id in your guild settings")
-    channel = member.guild.get_channel(int(guild_specific[str(member.guild.id)]["welcome_channel"]))
+    channel = member.guild.get_channel(int(bot.data["guild_specific"][str(member.guild.id)]["welcome_channel"]))
     if not channel:
         return
 
@@ -121,11 +115,11 @@ async def on_member_join(member):
 
 @bot.event
 async def on_member_remove(member):
-    if str(member.guild.id) not in guild_specific:
+    if str(member.guild.id) not in bot.data["guild_specific"]:
         return await log_message("please put your guild id in guild_specific.json")
-    if "welcome_channel" not in guild_specific[str(member.guild.id)]:
+    if "welcome_channel" not in bot.data["guild_specific"][str(member.guild.id)]:
         return await log_message("please put a `welcome_channel` id in your guild settings")
-    channel = member.guild.get_channel(int(guild_specific[str(member.guild.id)]["welcome_channel"]))
+    channel = member.guild.get_channel(int(bot.data["guild_specific"][str(member.guild.id)]["welcome_channel"]))
     if not channel:
         return
 

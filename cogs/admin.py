@@ -1,48 +1,12 @@
 import discord
 from discord.ext import commands
 import time
-import json
-import os
 import re
 from datetime import timedelta
 
 class AdminCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-
-    def __init__(self, bot):
-        self.bot = bot
-        self.mod_actions = self.load_json("mod_actions.json")
-        self.guild_specific = self.load_json("guild_specific.json")
-
-    # INFINITE VC CHANNELS
-    def load_json(self, filename):
-        if os.path.exists(filename):
-            try:
-                with open(filename, "r") as file:
-                    return json.load(file)
-            except json.JSONDecodeError:
-                return {}
-        return {}
-
-    def save_data(self):
-        with open('mod_actions.json', "w") as file:
-            json.dump(self.mod_actions, file, indent=4)
-
-        # Update data on the Github
-        """
-        if lastUpdate - 1800 > round(time.time()):
-            return False
-        else:
-            lastUpdate = round(time.time())
-        
-        try:
-            subprocess.run(["git", "add", "data.json"], check=True)
-            subprocess.run(["git", "commit", "-m", "Update data.json"], check=True)
-            subprocess.run(["git", "push"], check=True)
-        except subprocess.CalledProcessError as e:
-            log_message(f"Error pushing changes to GitHub for data.json, '{e}'")
-        """
 
     # ultra cool admin only commands
 
@@ -58,12 +22,12 @@ class AdminCommands(commands.Cog):
             entry["duration"] = str(timeout)
 
         guild = str(guild)
-        if guild not in self.mod_actions:
-            self.mod_actions[guild] = {}
+        if guild not in self.bot.data["mod_actions"]:
+            self.bot.data["mod_actions"][guild] = {}
 
-        numb = max(int(k) for k in self.mod_actions[guild].keys()) + 1
-        self.mod_actions[guild][str(numb)] = entry
-        self.save_data()
+        numb = max(int(k) for k in self.bot.data["mod_actions"][guild].keys()) + 1
+        self.bot.data["mod_actions"][guild][str(numb)] = entry
+        self.bot.save()
 
     def parse_time(self, time_str):
         match = re.match(r"(\d+)([dhm])", time_str.lower())
@@ -96,7 +60,7 @@ class AdminCommands(commands.Cog):
     async def check_perms(self, ctx, member):
         if ctx.author == ctx.guild.owner:
             return True
-        has_role = discord.utils.get(ctx.author.roles, id=int(self.guild_specific[str(ctx.guild.id)]["moderator_role_id"]))
+        has_role = discord.utils.get(ctx.author.roles, id=int(self.bot.data["guild_specific"][str(ctx.guild.id)]["moderator_role_id"]))
         if member and has_role:
             if member.top_role >= ctx.author.top_role and ctx.author != ctx.guild.owner:
                 await ctx.send(embed=discord.Embed(description="❌ You cant do that to someone with a higher or equal role to you", color=0xcc182a))
@@ -115,7 +79,7 @@ class AdminCommands(commands.Cog):
         
         casefound = 0
         embed=discord.Embed(title=f"Mod actions against {member}", color=0x0c8eeb)
-        for id, case in self.mod_actions[str(ctx.guild.id)].items():
+        for id, case in self.bot.data["mod_actions"][str(ctx.guild.id)].items():
             if int(case['user_id']) == member.id:
                 casefound += 1
                 moderator = await ctx.guild.fetch_member(int(case['moderator_id']))

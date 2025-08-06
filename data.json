@@ -1,0 +1,43 @@
+{
+    "guild_specific": {
+        "1034558177510961182": {
+            "welcome_channel": "1265540793456787546",
+            "log_channel": "1036159229440032768",
+            "infinivc_channel": "1195402268305014795",
+            "infinivc_category": "1034558178886701138",
+            "moderator_role_id": "1367887159478194196"
+        }
+    },
+    "user_channels": {
+        "753071027667468365": {
+            "ChannelID": "1401081701094129744",
+            "MessageID": "1401081704109572181",
+            "TimeDel": "1856709804"
+        }
+    },
+    "mod_actions": {
+        "1034558177510961182": {
+            "1": {
+                "user_id": "1247588434642731161",
+                "action": "kick",
+                "timestamp": "1745802223",
+                "reason": "bye nerd",
+                "moderator_id": "277243145081716736"
+            },
+            "2": {
+                "user_id": "760875587841294406",
+                "action": "ban",
+                "timestamp": "1746762825",
+                "reason": "No reason provided",
+                "moderator_id": "277243145081716736"
+            },
+            "3": {
+                "user_id": "760875587841294406",
+                "action": "unban",
+                "timestamp": "1746764412",
+                "reason": "No reason provided",
+                "moderator_id": "277243145081716736"
+            }
+        }
+    }
+}
