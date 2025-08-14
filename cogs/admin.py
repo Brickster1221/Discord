@@ -3,6 +3,27 @@ from discord.ext import commands
 import time
 import re
 from datetime import timedelta
+from discord.ui import View, Button
+import math
+
+class Pages(View): #modlog pages
+    def __init__(self, embeds):
+        super().__init__(timeout=180)
+        self.embeds = embeds
+        self.page = 0
+    
+    async def Update(self, interaction: discord.Interaction):
+        await interaction.response.edit_message(embed=self.embeds[self.page], view=self)
+
+    @discord.ui.button(label="Previous", style=discord.ButtonStyle.blurple)
+    async def previous(self, interaction: discord.Interaction, button: Button):
+        self.page = (self.page - 1 ) % len(self.embeds)
+        await self.Update(interaction)
+
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.blurple)
+    async def next(self, interaction: discord.Interaction, button: Button):
+        self.page = (self.page + 1 ) % len(self.embeds)
+        await self.Update(interaction)
 
 class AdminCommands(commands.Cog):
     def __init__(self, bot):
@@ -46,7 +67,7 @@ class AdminCommands(commands.Cog):
         else:
             return None
     
-    async def get_member(self, ctx, member):
+    async def get_member(self, ctx, member, senderror=True):
         try:
             return await commands.MemberConverter().convert(ctx, member)
         except commands.BadArgument:
@@ -54,7 +75,8 @@ class AdminCommands(commands.Cog):
                 return await self.bot.fetch_user(int(member))
             except (ValueError, discord.NotFound):
                 pass
-        await ctx.send(embed=discord.Embed(description="❌ Could not find a user with that ID or mention.", color=0xcc182a))
+        if senderror:
+            await ctx.send(embed=discord.Embed(description="❌ Could not find a user with that ID or mention.", color=0xcc182a))
         return None
 
     async def check_perms(self, ctx, member):
@@ -71,30 +93,43 @@ class AdminCommands(commands.Cog):
         await ctx.send(embed=discord.Embed(description="❌ You don't have permission to use this command.", color=0xcc182a))
         return False
     
-    @commands.command()
+    @commands.command(name='modlog', aliases=['modlogs'])
     async def modlog(self, ctx, member: str="None"):
-        member = await self.get_member(ctx, member)
-        if not member:
-            return
-        
+        member = await self.get_member(ctx, member, False)
+        actions = self.bot.data["mod_actions"].get(str(ctx.guild.id), {})
+        embeds = []
         casefound = 0
-        embed=discord.Embed(title=f"Mod actions against {member}", color=0x0c8eeb)
-        for id, case in self.bot.data["mod_actions"][str(ctx.guild.id)].items():
-            if int(case['user_id']) == member.id:
-                casefound += 1
-                moderator = await ctx.guild.fetch_member(int(case['moderator_id']))
-                embed.add_field(name=f"Case #{id}",
-                    value=(
-                        f"**Action:** {case['action'].capitalize()}\n"
-                        f"**Reason:** {case['reason']}\n"
-                        f"**User:** {member.mention} ({member})\n"
-                        f"**Moderator:** {moderator.mention} ({moderator})\n"
-                        f"Issued: <t:{case['timestamp']}:R>"
-                    ), inline=False)
-        if  casefound > 0:
-            return await ctx.send(embed=embed)
-        else:
-            return await ctx.send(embed=discord.Embed(description=f"❌ There are no entries for this user", color=0xcc182a))
+
+        cases = []
+        for id, case in actions.items():
+            if member and int(case['user_id']) != member.id:
+                continue
+
+            casefound += 1
+            moderator = await self.bot.fetch_user(int(case['moderator_id']))
+            user = await self.bot.fetch_user(int(case['user_id']))
+
+            cases.append((
+                f"Case #{id}",
+                f"**Action:** {case['action'].capitalize()}\n"
+                f"**Reason:** {case['reason']}\n"
+                f"**User:** {user.mention} ({user})\n"
+                f"**Moderator:** {moderator.mention} ({moderator})\n"
+                f"Issued: <t:{case['timestamp']}:R>"
+            ))
+
+        if casefound == 0:
+            return await ctx.send(embed=discord.Embed(description=f"❌ no logs found", color=0xcc182a))
+
+        for i in range(0, len(cases), 5):
+            embed = discord.Embed(title="Mod actions", color=0x0c8eeb)
+            for name, value in cases[i:i+5]:
+                embed.add_field(name=name, value=value, inline=False)
+            embed.set_footer(text=f"Page {len(embeds)+1}/{math.ceil(len(cases)/5)}")
+            embeds.append(embed)
+
+        view = Pages(embeds)
+        await ctx.send(embed=embeds[0], view=view) 
 
     async def moderate(self, ctx, action: str, member: str, args):
         try:

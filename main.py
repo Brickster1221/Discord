@@ -169,28 +169,35 @@ async def repeat(ctx, *, text: str):
     else:
         await ctx.send(text)
 
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        await help(ctx)
+    else:
+        raise error
+
 @bot.command(name='help', aliases=[''])
 async def help(ctx, args=""):
     if args == "moderation":
         embed = discord.Embed(title="List of moderation commands", color=0x0c8eeb)
-        embed.add_field(name="?ban", value="bans a member from the server, using something like 1d/1h/1m will set them to be unbanned in that time", inline=True)
-        embed.add_field(name="?unban", value="unbans a member", inline=True)
-        embed.add_field(name="?mute", value="mutes a member by making them only be able to access one channel", inline=True)
-        embed.add_field(name="?kick", value="kicks a member from the server", inline=True)
-        embed.add_field(name="?warn", value="warns a member, useful for seeing what they have done in the past", inline=True)
+        embed.add_field(name=f"{ctx.prefix}ban", value="bans a member from the server, using something like 1d/1h/1m will set them to be unbanned in that time", inline=True)
+        embed.add_field(name=f"{ctx.prefix}unban", value="unbans a member", inline=True)
+        embed.add_field(name=f"{ctx.prefix}mute", value="mutes a member by making them only be able to access one channel", inline=True)
+        embed.add_field(name=f"{ctx.prefix}kick", value="kicks a member from the server", inline=True)
+        embed.add_field(name=f"{ctx.prefix}warn", value="warns a member, useful for seeing what they have done in the past", inline=True)
         await ctx.send(embed=embed)
     elif args == "infinivc":
         embed = discord.Embed(title="List of infinivc commands", description="These can only be used in infinivc channels", color=0x0c8eeb)
-        embed.add_field(name="?infinivc timer", value="typing the argument, 1d/1h/1m will set the vc to delete at the time you choose", inline=True)
-        embed.add_field(name="?infinivc info", value="This will display info about the current vc you are tpying the command in", inline=True)
-        embed.add_field(name="?infinivc delete", value="This will delete the channel if you are the owner of it", inline=True)
+        embed.add_field(name=f"{ctx.prefix}infinivc timer", value="typing the argument, 1d/1h/1m will set the vc to delete at the time you choose", inline=True)
+        embed.add_field(name=f"{ctx.prefix}infinivc info", value="This will display info about the current vc you are tpying the command in", inline=True)
+        embed.add_field(name=f"{ctx.prefix}infinivc delete", value="This will delete the channel if you are the owner of it", inline=True)
         await ctx.send(embed=embed)
     else:
         embed=discord.Embed(title="List of commands", color=0x0c8eeb)
-        embed.add_field(name="?help", value="displays a list of helpful commands", inline=True)
-        embed.add_field(name="?repeat", value="makes the bot repeat what you type, use `-del` to automatically delete your message after", inline=True)
-        embed.add_field(name="infinivc commands", value="use `?help infinivc` for more information", inline=True)
-        embed.add_field(name="moderation commands", value="use `?help moderation` for more information", inline=True)
+        embed.add_field(name=f"{ctx.prefix}help", value="displays a list of helpful commands", inline=True)
+        embed.add_field(name=f"{ctx.prefix}repeat", value="makes the bot repeat what you type, use `-del` to automatically delete your message after", inline=True)
+        embed.add_field(name="infinivc commands", value=f"use `{ctx.prefix}help infinivc` for more information", inline=True)
+        embed.add_field(name="moderation commands", value=f"use `{ctx.prefix}help moderation` for more information", inline=True)
         await ctx.send(embed=embed)
 
 @bot.command()
