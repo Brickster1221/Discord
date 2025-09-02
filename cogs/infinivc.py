@@ -132,8 +132,6 @@ class infinivc(commands.Cog):
     async def error(self, ctx, error):
         await self.bot.log(f"Unexpected errer during infinivc command, `{error}`")
         await ctx.send(embed=discord.Embed(description="❌ an unexpected error occured", color=0xcc182a))
-        
-
 
 async def setup(bot):
     await bot.add_cog(infinivc(bot))

@@ -1,3 +1,4 @@
+#import spam
 import discord
 from discord.ext import commands
 from datetime import datetime, timezone, timedelta
@@ -7,6 +8,7 @@ import json
 import os
 import random
 
+#default bot setup
 intents = discord.Intents.default()
 intents.voice_states = True
 intents.guilds = True
@@ -17,6 +19,7 @@ bot = commands.Bot(command_prefix="?", intents=intents, help_command=None)
 with open('secret.json') as f:
     secret = json.load(f)
 
+#save and load data
 bot.data = {}
 def load_data():
     if os.path.exists('data.json'):
@@ -32,30 +35,35 @@ def save_data():
 bot.save = save_data
 load_data()
 
+#logging
 async def log_message(message, guild=1034558177510961182):
     timestamp = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
     print(f"{timestamp} {message}")
     channel = bot.get_channel(int(bot.data["guild_specific"][str(guild)]["log_channel"]))
     if channel:
         await channel.send(
-            f"<t:{round(time.time())}> (<t:{round(time.time())}:R>) {message}")
-        
+            f"<t:{round(time.time())}> (<t:{round(time.time())}:R>) {message}")        
 bot.log = log_message
+
 
 @bot.event
 async def on_ready():
     await log_message(f"Logged in as `{bot.user}`")
     await bot.load_extension('cogs.admin')
     await bot.load_extension('cogs.infinivc')
-    bot.loop.create_task(constant_loop())
+    await check_members()
+    bot.loop.create_task(constant_loop()) #loop for unbans and vc timers
 
 @bot.event
 async def on_message(message):
     await bot.process_commands(message)
     text = message.content.lower()
-    if "job" in text:
+    if bot.data["guild_specific"][str(message.guild.id)]['censor_job'] == True and "job" in text:
         await message.channel.send("DONT SAY THAT WORD", reference=message)
-        await message.author.timeout(timedelta(seconds=3), reason="said the j slur")
+        try:
+           await message.author.timeout(timedelta(seconds=3), reason="said the j slur") 
+        except:
+            pass
         await log_message(f"{message.author} said the j slur :sob:")
 
 async def constant_loop():
@@ -94,35 +102,79 @@ async def constant_loop():
 
         await asyncio.sleep(300)
 
-@bot.event
-async def on_member_join(member):
-    if str(member.guild.id) not in bot.data["guild_specific"]:
-        return log_message("please put your guild id in guild_specific.json")
-    if "welcome_channel" not in bot.data["guild_specific"][str(member.guild.id)]:
+"""
+Ultra cool comment to show that everything till the next comment is to do with the 
+join_leave_messages variable in guild_specific omg wow
+"""
+async def joinmessage(member, guild, join, duration=None):
+    if bot.data["guild_specific"][str(guild.id)]["join_leave_messages"] == False:
+        return
+    if "welcome_channel" not in bot.data["guild_specific"][str(guild.id)]:
         return log_message("please put a `welcome_channel` id in your guild settings")
-    channel = member.guild.get_channel(int(bot.data["guild_specific"][str(member.guild.id)]["welcome_channel"]))
+    channel = bot.get_channel(int(bot.data["guild_specific"][str(guild.id)]["welcome_channel"]))
     if not channel:
         return
+    
 
-    messages = [f"{member.mention} has joined the server!!", f"Welcome {member.mention} to the server!!",
-                f"{member.mention} arrived!!", f"{member.mention} just showed up!!", f"Yay you made it {member.mention}!!",
-                f"{member.mention} joined the party!!"]
-    message = random.choice(messages)
-    await channel.send(f"-> ({str(member.guild.member_count)}) {message}\n-# ({member.name})")
+    messages = [f"{member.mention} has joined the server!!",
+                f"Welcome {member.mention} to the server!!",
+                f"{member.mention} arrived!!", f"{member.mention} just showed up!!",
+                f"Yay you made it {member.mention}!!",
+                f"{member.mention} joined the party!!"
+            ] if join else [
+                f"{member.mention} has left the server >:C",
+                f"{member.mention} has left us behind :C",
+                f"{member.mention} moved on :("
+            ]
+    if join:
+        message = f"-> ({guild.member_count}) {random.choice(messages)}\n-# ({member.name})"
+    elif duration:
+        message = f"<- ({guild.member_count}) {random.choice(messages)}, they were here for {duration}\n-# ({member.name})"
+    else:
+        message = f"<- ({guild.member_count}) {random.choice(messages)}\n-# ({member.name})"
 
+    await channel.send(f"{message}")
+
+async def check_members():
+    if not "members" in bot.data:
+        bot.data["members"] = {}
+        save_data()
+
+    for guildid in bot.data["members"]:
+        if bot.data["guild_specific"][guildid]["join_leave_messages"] == False:
+            return
+
+        data = bot.data["members"][guildid]
+        newlist = data.copy()
+        guild = bot.get_guild(int(guildid))
+
+        for member in guild.members:
+            if str(member.id) in newlist:
+                newlist.remove(str(member.id))
+            else:
+                await joinmessage(member, guild, True)
+                data.append(str(member.id))
+        
+        if len(newlist) >= 0:
+            for memberid in newlist:
+                member = await bot.fetch_user(int(memberid))
+                await joinmessage(member, guild, False)
+                data.remove(memberid)
+    save_data()
+
+@bot.command()
+async def test(ctx):
+    await joinmessage(ctx.author, ctx.guild, False)
+
+@bot.event
+async def on_member_join(member):
+    await joinmessage(member, member.guild, True)
+    bot.data["members"][member.guild.id].append(str(member.id))
     role = discord.utils.get(member.guild.roles, name="hi")
     await member.add_roles(role)
 
 @bot.event
 async def on_member_remove(member):
-    if str(member.guild.id) not in bot.data["guild_specific"]:
-        return await log_message("please put your guild id in guild_specific.json")
-    if "welcome_channel" not in bot.data["guild_specific"][str(member.guild.id)]:
-        return await log_message("please put a `welcome_channel` id in your guild settings")
-    channel = member.guild.get_channel(int(bot.data["guild_specific"][str(member.guild.id)]["welcome_channel"]))
-    if not channel:
-        return
-
     duration = None
     if member.joined_at:
         now = datetime.now(timezone.utc)
@@ -134,16 +186,17 @@ async def on_member_remove(member):
 
         duration = f"{days} days, {hours} hours, and {minutes} minutes"
     
-    messages = [f"{member.mention} has left the server >:C"]
-    message = random.choice(messages)
-    if  duration:
-        message = f"{message}, they were here for {duration}"
+    await joinmessage(member, member.guild, False, duration)
+    bot.data["members"][member.guild.id].remove(str(member.id))
 
-    await channel.send(f"<- ({str(member.guild.member_count)}) {message}\n-# ({member.name})")
+"""
+omg ultra cool comment to end the join/leave channel message things wowie
+"""
 
-#sends a message in vc when someone joins/leaves
 @bot.event
 async def on_voice_state_update(member, before, after):
+    if bot.data["guild_specific"][str(member.guild.id)]["vc_log"] == False:
+        return
     if before.channel == after.channel:
         return
     if before.channel:
@@ -151,8 +204,11 @@ async def on_voice_state_update(member, before, after):
     if after.channel:
         await after.channel.send(f"<t:{round(time.time())}:T> {member} joined")
 
+#cool repeat command
 @bot.command()
 async def repeat(ctx, *, text: str):
+    if bot.data["guild_specific"][str(ctx.guild.id)]["repeat_command"] == False:
+        return
     if "@everyone" in text or "@here" in text or "@&" in text:
         await log_message(f"yeah, `{ctx.author}` really tried that")
         await ctx.send(f"You really tried that didnt you, {ctx.author}")
@@ -161,13 +217,13 @@ async def repeat(ctx, *, text: str):
         await ctx.message.delete()
         text = text.replace('-del', '').strip()
     
-    await log_message(f"`{ctx.author}` made the bot say: `{text}`")
-    
     if ctx.message.reference and ctx.message.reference.resolved:
         replied_message = ctx.message.reference.resolved
         await ctx.send(text, reference=replied_message)
     else:
         await ctx.send(text)
+    
+    await log_message(f"`{ctx.author}` made the bot say: `{text}`")
 
 @bot.event
 async def on_command_error(ctx, error):
@@ -176,6 +232,7 @@ async def on_command_error(ctx, error):
     else:
         raise error
 
+#bet you cant guess what this is
 @bot.command(name='help', aliases=[''])
 async def help(ctx, args=""):
     if args == "moderation":
@@ -199,10 +256,6 @@ async def help(ctx, args=""):
         embed.add_field(name="infinivc commands", value=f"use `{ctx.prefix}help infinivc` for more information", inline=True)
         embed.add_field(name="moderation commands", value=f"use `{ctx.prefix}help moderation` for more information", inline=True)
         await ctx.send(embed=embed)
-
-@bot.command()
-async def test(ctx):
-    await ctx.channel.send(f"<- ({str(ctx.guild.member_count)}) {ctx}\n-# ({ctx.author})")
 
 token = secret["token"]
 bot.run(token)
