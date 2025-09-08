@@ -132,23 +132,27 @@ class AdminCommands(commands.Cog):
         await ctx.send(embed=embeds[0], view=view) 
 
     async def moderate(self, ctx, action: str, member: str, args):
+        errormsg = "None"
         try:
             member = await self.get_member(ctx, member)
             if not member:
-                return
+                return await ctx.send(embed=discord.Embed(description=f"❌ Please provide a valid member.", color=0xcc182a))
             if not await self.check_perms(ctx, member):
-                return
+                return await ctx.send(embed=discord.Embed(description=f"❌ You do not have permission to run this command.", color=0xcc182a))
 
             split = args.split(" ", 1)  # Split into time and reason
-            time = split[0]
-            duration = self.parse_time(time) if time else None
+            timea = split[0]
+            duration = self.parse_time(timea) if timea else None
 
             reason = split[1] if duration and len(split) > 1 else args
             if not duration:
-                time = None
+                if action == "timeout":
+                    return await ctx.send(embed=discord.Embed(description=f"❌ You need to provide a duration for timeouts.", color=0xcc182a))
+                timea = None
 
             timeout = round(time.time()) + duration if duration else None
 
+            errormsg = "logging"
             self.log_modcommand(
                 user_id=member.id,
                 action=action,
@@ -158,11 +162,13 @@ class AdminCommands(commands.Cog):
                 timeout=timeout
             )
 
+            errormsg = "dm"
             dm_msg = {
-                "ban": f"**You have been banned in stuffs for {time}** | {reason}" if time else f"**You have been banned in stuffs** | {reason}",
+                "ban": f"**You have been banned in stuffs for {timea}** | {reason}" if timea else f"**You have been banned in stuffs** | {reason}",
                 "unban": f"**You have been unbanned from stuffs** | {reason}",
                 "kick": f"**You have been kicked from stuffs** | {reason}",
-                "warn": f"**You have been warned in stuffs** | {reason}"
+                "warn": f"**You have been warned in stuffs** | {reason}",
+                "timeout": ""
             }[action]
 
             try:
@@ -177,20 +183,22 @@ class AdminCommands(commands.Cog):
                 await self.bot.log(f"could not dm `{member}` during {action}")
 
             funny = {
-                "ban": f"BANNED for {time}" if time else f"BANNED",
+                "ban": f"BANNED for {timea}" if timea else f"BANNED",
                 "unban": f"UNBANNED",
                 "kick": f"KICKED",
                 "warn": f"WARNED",
                 "timeout": f"MUTED"
             }[action]
 
+            errormsg = "embed"
             embed=discord.Embed(description=(
                 f"✅ **{member.mention} has been {funny}** | {reason}"), color=0x06700b)
             await ctx.send(embed=embed)
 
+            errormsg = "action"
             if action == "ban":
                 await member.ban(reason=reason)
-                await self.bot.log(f"`{member}` has been banned for `{time}` because `{reason}` by `{ctx.author}`")
+                await self.bot.log(f"`{member}` has been banned for `{timea}` because `{reason}` by `{ctx.author}`")
             elif action == "unban":
                 await ctx.guild.unban(member)
                 await self.bot.log(f"`{member}` has been unbanned for `{reason}` by `{ctx.author}`")
@@ -201,9 +209,9 @@ class AdminCommands(commands.Cog):
                 await self.bot.log(f"`{member}` has been warned for `{reason}` by `{ctx.author}`")
             elif action == "timeout":
                 await member.timeout(timedelta(seconds=duration), reason=reason)
-                await self.bot.log(f"`{member}` has been timed out for `{time}` because `{reason}` by `{ctx.author}`")
+                await self.bot.log(f"`{member}` has been timed out for `{timea}` because `{reason}` by `{ctx.author}`")
         except Exception as e:
-            await self.bot.log(f"Unknown error occured while taking action on a member: `{e}`")
+            await self.bot.log(f"Unknown error occured while taking action on a member: `{e}`, error msg `{errormsg}`")
             return await ctx.send(embed=discord.Embed(description=f"❌ An unexpected error has occured.", color=0xcc182a))
     
     @commands.command()

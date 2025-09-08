@@ -169,7 +169,8 @@ async def test(ctx):
 @bot.event
 async def on_member_join(member):
     await joinmessage(member, member.guild, True)
-    bot.data["members"][member.guild.id].append(str(member.id))
+    bot.data["members"][str(member.guild.id)].append(str(member.id))
+    save_data()
     role = discord.utils.get(member.guild.roles, name="hi")
     await member.add_roles(role)
 
@@ -187,7 +188,8 @@ async def on_member_remove(member):
         duration = f"{days} days, {hours} hours, and {minutes} minutes"
     
     await joinmessage(member, member.guild, False, duration)
-    bot.data["members"][member.guild.id].remove(str(member.id))
+    bot.data["members"][str(member.guild.id)].remove(str(member.id))
+    save_data()
 
 """
 omg ultra cool comment to end the join/leave channel message things wowie
