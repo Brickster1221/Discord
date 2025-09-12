@@ -162,10 +162,6 @@ async def check_members():
                 data.remove(memberid)
     save_data()
 
-@bot.command()
-async def test(ctx):
-    await joinmessage(ctx.author, ctx.guild, False)
-
 @bot.event
 async def on_member_join(member):
     await joinmessage(member, member.guild, True)
@@ -255,9 +251,28 @@ async def help(ctx, args=""):
         embed=discord.Embed(title="List of commands", color=0x0c8eeb)
         embed.add_field(name=f"{ctx.prefix}help", value="displays a list of helpful commands", inline=True)
         embed.add_field(name=f"{ctx.prefix}repeat", value="makes the bot repeat what you type, use `-del` to automatically delete your message after", inline=True)
+        embed.add_field(name=f"{ctx.prefix}theforbiidencommand", value="gives/removes your perms for <#1382937610774777966>")
         embed.add_field(name="infinivc commands", value=f"use `{ctx.prefix}help infinivc` for more information", inline=True)
         embed.add_field(name="moderation commands", value=f"use `{ctx.prefix}help moderation` for more information", inline=True)
         await ctx.send(embed=embed)
+
+@bot.command()
+async def theforbiddencommand(ctx):
+    channel = ctx.guild.get_channel(1382937610774777966)
+    if channel:
+        if channel.permissions_for(ctx.author).view_channel:
+            try:
+                await channel.set_permissions(ctx.author, view_channel=False)
+                await ctx.send("ok you dont have perms anymore")
+            except:
+                await ctx.send("Error")
+        else:
+            try:
+                await channel.set_permissions(ctx.author, view_channel=True)
+                await ctx.send("you have perms ig")
+            except:
+                await ctx.send("Error")
+    
 
 token = secret["token"]
 bot.run(token)

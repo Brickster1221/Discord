@@ -136,9 +136,9 @@ class AdminCommands(commands.Cog):
         try:
             member = await self.get_member(ctx, member)
             if not member:
-                return await ctx.send(embed=discord.Embed(description=f"❌ Please provide a valid member.", color=0xcc182a))
+                return
             if not await self.check_perms(ctx, member):
-                return await ctx.send(embed=discord.Embed(description=f"❌ You do not have permission to run this command.", color=0xcc182a))
+                return
 
             split = args.split(" ", 1)  # Split into time and reason
             timea = split[0]
