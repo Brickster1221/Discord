@@ -51,7 +51,7 @@ class AdminCommands(commands.Cog):
         self.bot.save()
 
     def parse_time(self, time_str):
-        match = re.match(r"(\d+)([dhm])", time_str.lower())
+        match = re.match(r"(\d+)([dhms])", time_str.lower())
         if not match:
             return None
 
@@ -64,6 +64,8 @@ class AdminCommands(commands.Cog):
             return amount * 3600
         elif unit == "m":
             return amount * 60
+        elif unit == "s":
+            return amount
         else:
             return None
     
@@ -111,7 +113,8 @@ class AdminCommands(commands.Cog):
 
             cases.append((
                 f"Case #{id}",
-                f"**Action:** {case['action'].capitalize()}\n"
+                f"**Action:** {case['action'].capitalize()}\n" +
+                (f"**Duration:** {case['duration']} seconds\n" if case.get('duration') else "") + #format this later
                 f"**Reason:** {case['reason']}\n"
                 f"**User:** {user.mention} ({user})\n"
                 f"**Moderator:** {moderator.mention} ({moderator})\n"
@@ -150,8 +153,6 @@ class AdminCommands(commands.Cog):
                     return await ctx.send(embed=discord.Embed(description=f"❌ You need to provide a duration for timeouts.", color=0xcc182a))
                 timea = None
 
-            timeout = round(time.time()) + duration if duration else None
-
             errormsg = "logging"
             self.log_modcommand(
                 user_id=member.id,
@@ -159,7 +160,7 @@ class AdminCommands(commands.Cog):
                 reason=reason,
                 mod=ctx.author.id,
                 guild=ctx.guild.id,
-                timeout=timeout
+                timeout=duration
             )
 
             errormsg = "dm"
@@ -211,7 +212,7 @@ class AdminCommands(commands.Cog):
                 await member.timeout(timedelta(seconds=duration), reason=reason)
                 await self.bot.log(f"`{member}` has been timed out for `{timea}` because `{reason}` by `{ctx.author}`")
         except Exception as e:
-            await self.bot.log(f"Unknown error occured while taking action on a member: `{e}`, error msg `{errormsg}`")
+            await self.bot.log(f"Unknown error occured while taking action on a member: `{e}`, error code `{errormsg}`")
             return await ctx.send(embed=discord.Embed(description=f"❌ An unexpected error has occured.", color=0xcc182a))
     
     @commands.command()

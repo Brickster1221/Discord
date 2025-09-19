@@ -87,20 +87,19 @@ async def constant_loop():
             save_data()
         
         """
-        for Case in mod_actions.values():
-            if Case['action'] == "ban" and "unban_time" in Case:
-                if round(time.time()) > int(Case["unban_time"]) and int(Case["unban_time"]) > 0:
-                    try:
-                        guild = bot.get_guild(1034558177510961182)
-                        await guild.unban(discord.Object(id=int(Case["user_id"])))
-                        await log_message(f"Succesfully unbanned `{Case['user_id']}`, Case `{Case}`")
-                        Case['unban_time'] = "0"
-                    except Exception as e:
-                        await log_message(f"Couldn't unban `{Case['user_id']}`: `{e}`")
-                        Case['unban_time'] = "0"
-        """
+        for guildid in bot.data['mod_actions']:
+            for case in bot.data['mod_actions'][guildid]:
+                if case['action'] == "ban" and "duration" in case:
+                    if round(time.time()) > (int(case['duration']) + round(time.time())):
+                        try:
+                            guild = bot.get_guild(int(guildid))
+                            await guild.unban(discord.Object(id=int(case["user_id"])))
+                            await log_message(f"Succesfully unbanned `{case['user_id']}`, Case `{case}`")
+                        except Exception as e:
+                            await log_message(f"Couldnt unban `{case['user_id']}`: `{e}`")
 
         await asyncio.sleep(300)
+        """
 
 """
 Ultra cool comment to show that everything till the next comment is to do with the 
@@ -251,7 +250,7 @@ async def help(ctx, args=""):
         embed=discord.Embed(title="List of commands", color=0x0c8eeb)
         embed.add_field(name=f"{ctx.prefix}help", value="displays a list of helpful commands", inline=True)
         embed.add_field(name=f"{ctx.prefix}repeat", value="makes the bot repeat what you type, use `-del` to automatically delete your message after", inline=True)
-        embed.add_field(name=f"{ctx.prefix}theforbiidencommand", value="gives/removes your perms for <#1382937610774777966>")
+        embed.add_field(name=f"{ctx.prefix}theforbiddencommand", value="gives/removes your perms for <#1382937610774777966>")
         embed.add_field(name="infinivc commands", value=f"use `{ctx.prefix}help infinivc` for more information", inline=True)
         embed.add_field(name="moderation commands", value=f"use `{ctx.prefix}help moderation` for more information", inline=True)
         await ctx.send(embed=embed)
@@ -272,6 +271,10 @@ async def theforbiddencommand(ctx):
                 await ctx.send("you have perms ig")
             except:
                 await ctx.send("Error")
+
+@bot.command()
+async def test(ctx):
+    await ctx.send("hello")
     
 
 token = secret["token"]
