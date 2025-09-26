@@ -4,7 +4,7 @@ from discord.ext import commands
 from datetime import datetime, timezone, timedelta
 import asyncio
 import time
-import json
+import pickle
 import os
 import random
 
@@ -16,22 +16,19 @@ intents.members = True
 intents.message_content = True
 bot = commands.Bot(command_prefix="?", intents=intents, help_command=None)
 
-with open('secret.json') as f:
-    secret = json.load(f)
+with open('secret.pickle') as f:
+    secret = pickle.load(f)
 
 #save and load data
 bot.data = {}
 def load_data():
-    if os.path.exists('data.json'):
-        try:
-            with open('data.json', "r") as file:
-                bot.data = json.load(file)
-        except json.JSONDecodeError:
-            bot.data = {}
+    if os.path.exists('data.pickle'):
+        with open('data.pickle', "r") as file:
+            bot.data = pickle.load(file)
 
 def save_data():
-    with open('data.json', "w") as file:
-        json.dump(bot.data, file, indent=4)
+    with open('data.pickle', "w") as file:
+        pickle.dump(bot.data, file)
 bot.save = save_data
 load_data()
 
