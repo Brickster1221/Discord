@@ -89,22 +89,35 @@ async def constant_loop():
         """
         for guildid in bot.data['mod_actions']:
             for case in bot.data['mod_actions'][guildid]:
-                if case['action'] == "ban" and "duration" in case:
+                if case["action"] == "ban" and "duration" in case:
                     if round(time.time()) > (int(case['duration']) + round(time.time())):
                         try:
                             guild = bot.get_guild(int(guildid))
                             await guild.unban(discord.Object(id=int(case["user_id"])))
-                            await log_message(f"Succesfully unbanned `{case['user_id']}`, Case `{case}`")
+                            await log_message(f"Succesfully unbanned <@{case['user_id']}>, Case `{case}`")
                         except Exception as e:
                             await log_message(f"Couldnt unban `{case['user_id']}`: `{e}`")
-
-        await asyncio.sleep(300)
         """
-
+        
+        await asyncio.sleep(300)
 """
 Ultra cool comment to show that everything till the next comment is to do with the 
 join_leave_messages variable in guild_specific omg wow
 """
+async def packData(numb):
+    chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    if numb == 0:
+        return 0
+    s = []
+    while numb > 0:
+        s.append(chars[numb % 64])
+        n //= 64
+    return ''.join(reversed(s))
+
+@bot.command()
+async def test(ctx):
+    await ctx.send(packData(21938128939534))
+
 async def joinmessage(member, guild, join, duration=None):
     if bot.data["guild_specific"][str(guild.id)]["join_leave_messages"] == False:
         return
@@ -202,7 +215,7 @@ async def on_voice_state_update(member, before, after):
         await after.channel.send(f"<t:{round(time.time())}:T> {member} joined")
 
 #cool repeat command
-@bot.command()
+@bot.command(name='repeat', aliases=['rep'])
 async def repeat(ctx, *, text: str):
     if bot.data["guild_specific"][str(ctx.guild.id)]["repeat_command"] == False:
         return
@@ -222,13 +235,6 @@ async def repeat(ctx, *, text: str):
     
     await log_message(f"`{ctx.author}` made the bot say: `{text}`")
 
-@bot.event
-async def on_command_error(ctx, error):
-    if isinstance(error, commands.CommandNotFound):
-        await help(ctx)
-    else:
-        raise error
-
 #bet you cant guess what this is
 @bot.command(name='help', aliases=[''])
 async def help(ctx, args=""):
@@ -243,6 +249,7 @@ async def help(ctx, args=""):
     elif args == "infinivc":
         embed = discord.Embed(title="List of infinivc commands", description="These can only be used in infinivc channels", color=0x0c8eeb)
         embed.add_field(name=f"{ctx.prefix}infinivc timer", value="typing the argument, 1d/1h/1m will set the vc to delete at the time you choose", inline=True)
+        embed.add_field(name=f"{ctx.prefix}infinivc timeout", value="This will set the default deletion time for when somebody joins/leaves this vc", inline=True)
         embed.add_field(name=f"{ctx.prefix}infinivc info", value="This will display info about the current vc you are tpying the command in", inline=True)
         embed.add_field(name=f"{ctx.prefix}infinivc delete", value="This will delete the channel if you are the owner of it", inline=True)
         await ctx.send(embed=embed)
@@ -272,9 +279,12 @@ async def theforbiddencommand(ctx):
             except:
                 await ctx.send("Error")
 
-@bot.command()
-async def test(ctx):
-    await ctx.send("hello")
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        await help(ctx)
+    else:
+        raise error
     
 
 token = secret["token"]

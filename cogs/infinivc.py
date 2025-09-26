@@ -39,8 +39,9 @@ class infinivc(commands.Cog):
         if after.channel and guild in self.bot.data["guild_specific"]:
             if after.channel.id == int(self.bot.data["guild_specific"][guild]["infinivc_channel"]):
                 category = member.guild.get_channel(int(self.bot.data["guild_specific"][guild]["infinivc_category"]))
+                if not category: return self.bot.log("Please put an infinivc category in fuild settings")
                 try: existing = member.guild.get_channel(int(self.bot.data["user_channels"][str(member.id)]['ChannelID'])) 
-                except Exception as e: existing = None
+                except Exception: existing = None
                 if existing:
                     await member.move_to(existing)
                     return
@@ -65,15 +66,20 @@ class infinivc(commands.Cog):
                 message = await temp_channel.send(f"Channel will be deleted eventualy")
                 await self.update_data(member.id, temp_channel.id, 'ChannelID')
                 await self.update_data(member.id, message.id, 'MessageID')
-                await self.update_data(member.id,round(time.time()) + self.defaultTime, 'TimeDel')
+                await self.update_data(member.id, round(time.time()) + self.defaultTime, 'TimeDel')
+                await self.update_data(member.id, self.defaultTime, 'defaultTimeout')
                 await member.move_to(temp_channel)
 
         for state_channel in [after.channel, before.channel]:
             if state_channel:
+                data = self.bot.data["user_channels"]
                 user_id = self.get_data(state_channel.id)
-                if user_id in self.bot.data["user_channels"]:
-                    if int(self.bot.data["user_channels"][user_id]['TimeDel']) < round(time.time()) + self.defaultTime - 1*60*60: #prevents getting rate limited
-                        await self.update_data(user_id, round(time.time()) + self.defaultTime, 'TimeDel')
+                if user_id in data:
+                    defaultTime = self.defaultTime
+                    if defaultTime in data[user_id]:
+                        defaultTime = data[user_id]['defaultTime']
+                    if int(data[user_id]['TimeDel']) < round(time.time()) + defaultTime - 1*60*60: #prevents getting rate limited
+                        await self.update_data(user_id, round(time.time()) + defaultTime, 'TimeDel')
 
     def parse_time(self, time_str):
         match = re.match(r"(\d+)([dhm])", time_str.lower())
@@ -103,28 +109,51 @@ class infinivc(commands.Cog):
         split = args.split(" ", 1)  # Split into time and reason
         arg = split[0]
         if arg == "timer":
-            timmy = split[1]
+            timmy = split[1] if len(split) > 1 else None
             duration = self.parse_time(timmy) if timmy else None
+            if not duration:
+                await ctx.send(embed=discord.Embed(description="❌ Please input a vaild time value", color=0xcc182a))
+                return
+            
             if duration > 30 * 24 * 60 * 60 and not has_role:
                 duration = 30 * 24 * 60 * 60 #sets max time to 30 days
-            if (duration < self.defaultTime and ctx.author.id != int(user_id)) and not has_role:
-                duration = self.defaultTime
+            defaultTime = self.defaultTime
+            if defaultTime in self.bot.data["user_channels"][user_id]:
+                defaultTime = self.bot.data["user_channels"][user_id]['defaultTime']
+            if (duration < defaultTime and ctx.author.id != int(user_id)) and not has_role:
+                duration = defaultTime
                 await ctx.send("You cannot go below the default time if you do not own this vc")
-            if not duration:
-                timmy = None
 
-            if duration:
-                await self.update_data(user_id, round(time.time()) + duration, 'TimeDel')
-                await ctx.send(f"This vc will now be deleted <t:{round(time.time()) + duration}:R>")
-            else:
+            await self.update_data(user_id, round(time.time()) + duration, 'TimeDel')
+            await ctx.send(f"This vc will now be deleted <t:{round(time.time()) + duration}:R>")
+        elif arg == "timeout":
+            timmy = split[1] if len(split) > 1 else None
+            duration = self.parse_time(timmy) if timmy else None
+            if not duration:
                 await ctx.send(embed=discord.Embed(description="❌ Please input a vaild time value", color=0xcc182a))
+                return
+            
+            defaultTime = self.defaultTime
+            if defaultTime in self.bot.data["user_channels"][user_id]:
+                defaultTime = self.bot.data["user_channels"][user_id]['defaultTime']
+            if duration > 30 * 24 * 60 * 60 and not has_role:
+                duration = 30 * 24 * 60 * 60 #sets max timeout to 30 days
+            if duration < defaultTime and ctx.author.id != int(user_id) and not has_role:
+                await ctx.send("You cannot go below the default time if you do not own this vc")
+            
+            await self.update_data(user_id, duration, 'defaultTime')
+            await ctx.send(f"Default timeout for this vc is now {duration}")
+            
         elif arg == "delete":
             if ctx.author.id == int(user_id) or has_role:
                 await ctx.channel.delete()
             else:
                 await ctx.send(embed=discord.Embed(description="❌ You do not own this VC", color=0xcc182a))
         elif arg == "info":
-            await ctx.send(embed=discord.Embed(title=ctx.channel.name, description=f"created by <@{user_id}>\nwill be deleted <t:{self.bot.data['user_channels'][user_id]['TimeDel']}:R>", color=0x0c8eeb))
+            msg = f"created by <@{user_id}>\nwill be deleted <t:{self.bot.data['user_channels'][user_id]['TimeDel']}:R>"
+            if self.bot.data["user_channels"][user_id]['defaultTime']:
+                msg = msg + f"\nDefault timeout: {self.bot.data['user_channels'][user_id]['defaultTime']}"
+            await ctx.send(embed=discord.Embed(title=ctx.channel.name, description=msg, color=0x0c8eeb))
         else:
             await ctx.send(embed=discord.Embed(description="❌ Not a valid argument, type `?help infinivc` to see valid arguments", color=0xcc182a))
 
