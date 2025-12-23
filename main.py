@@ -104,19 +104,27 @@ async def constant_loop():
 Ultra cool comment to show that everything till the next comment is to do with the 
 join_leave_messages variable in guild_specific omg wow
 """
-async def packData(numb):
-    chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-    if numb == 0:
-        return 0
-    s = []
-    while numb > 0:
-        s.append(chars[numb % 64])
-        n //= 64
-    return ''.join(reversed(s))
+def packData(n):
+    digits = "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ`~!@#$%^&*()_-+=[{}]\|,<.>/?"
+    if n == 0:
+        return "0"
+    result = []
+    while n:
+        n, r = divmod(n, 90)
+        result.append(digits[r])
+    return ''.join(reversed(result))
+
+def unpackData(n):
+    digits = "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ`~!@#$%^&*()_-+=[{}]\|,<.>/?"
+    value = 0
+    for char in n:
+        value = value * 90 + digits.index(char)
+    return value
 
 @bot.command()
-async def test(ctx):
-    await ctx.send(packData(21938128939534))
+async def test(ctx, txt):
+    await ctx.send(packData(int(txt)))
+    #await ctx.send(unpackData(str(txt)))
 
 async def joinmessage(member, guild, join, duration=None):
     if bot.data["guild_specific"][str(guild.id)]["join_leave_messages"] == False:

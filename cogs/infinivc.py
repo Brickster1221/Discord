@@ -76,8 +76,10 @@ class infinivc(commands.Cog):
                 user_id = self.get_data(state_channel.id)
                 if user_id in data:
                     defaultTime = self.defaultTime
-                    if defaultTime in data[user_id]:
-                        defaultTime = data[user_id]['defaultTime']
+                    if data[user_id]['defaultTime']:
+                        #print(data[user_id]['defaultTime'])
+                        defaultTime = int(data[user_id]['defaultTime'])
+                    #print(defaultTime)
                     if int(data[user_id]['TimeDel']) < round(time.time()) + defaultTime - 1*60*60: #prevents getting rate limited
                         await self.update_data(user_id, round(time.time()) + defaultTime, 'TimeDel')
 
