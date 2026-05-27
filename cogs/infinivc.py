@@ -67,7 +67,7 @@ class infinivc(commands.Cog):
                 await self.update_data(member.id, temp_channel.id, 'ChannelID')
                 await self.update_data(member.id, message.id, 'MessageID')
                 await self.update_data(member.id, round(time.time()) + self.defaultTime, 'TimeDel')
-                await self.update_data(member.id, self.defaultTime, 'defaultTimeout')
+                await self.update_data(member.id, self.defaultTime, 'defaultTime')
                 await member.move_to(temp_channel)
 
         for state_channel in [after.channel, before.channel]:

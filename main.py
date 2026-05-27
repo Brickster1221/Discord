@@ -14,7 +14,7 @@ intents.voice_states = True
 intents.guilds = True
 intents.members = True
 intents.message_content = True
-bot = commands.Bot(command_prefix="?", intents=intents, help_command=None)
+bot = commands.Bot(command_prefix="b/", intents=intents, help_command=None)
 
 with open('secret.json') as f:
     secret = json.load(f)
