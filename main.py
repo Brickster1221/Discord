@@ -104,28 +104,6 @@ async def constant_loop():
 Ultra cool comment to show that everything till the next comment is to do with the 
 join_leave_messages variable in guild_specific omg wow
 """
-def packData(n):
-    digits = "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ`~!@#$%^&*()_-+=[{}]\|,<.>/?"
-    if n == 0:
-        return "0"
-    result = []
-    while n:
-        n, r = divmod(n, 90)
-        result.append(digits[r])
-    return ''.join(reversed(result))
-
-def unpackData(n):
-    digits = "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ`~!@#$%^&*()_-+=[{}]\|,<.>/?"
-    value = 0
-    for char in n:
-        value = value * 90 + digits.index(char)
-    return value
-
-@bot.command()
-async def test(ctx, txt):
-    await ctx.send(packData(int(txt)))
-    #await ctx.send(unpackData(str(txt)))
-
 async def joinmessage(member, guild, join, duration=None):
     if bot.data["guild_specific"][str(guild.id)]["join_leave_messages"] == False:
         return
@@ -167,18 +145,20 @@ async def check_members():
         data = bot.data["members"][guildid]
         newlist = data.copy()
         guild = bot.get_guild(int(guildid))
-
+        
         for member in guild.members:
             if str(member.id) in newlist:
                 newlist.remove(str(member.id))
             else:
-                await joinmessage(member, guild, True)
+                #await joinmessage(member, guild, True)
+                await log_message(f"`<@{memberid}>` Joined the server while the bot was offline")
                 data.append(str(member.id))
         
         if len(newlist) >= 0:
             for memberid in newlist:
                 member = await bot.fetch_user(int(memberid))
-                await joinmessage(member, guild, False)
+                #await joinmessage(member, guild, False)
+                await log_message(f"`<@{memberid}>` Left the server while the bot was offline")
                 data.remove(memberid)
     save_data()
 
