@@ -151,12 +151,12 @@ async def check_members():
                 newlist.remove(str(member.id))
             else:
                 #await joinmessage(member, guild, True)
-                await log_message(f"`<@{memberid}>` Joined the server while the bot was offline")
+                await log_message(f"`<@{member.id}>` Joined the server while the bot was offline")
                 data.append(str(member.id))
         
         if len(newlist) >= 0:
             for memberid in newlist:
-                member = await bot.fetch_user(int(memberid))
+                #member = await bot.fetch_user(int(memberid))
                 #await joinmessage(member, guild, False)
                 await log_message(f"`<@{memberid}>` Left the server while the bot was offline")
                 data.remove(memberid)
