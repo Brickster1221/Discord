@@ -58,6 +58,8 @@ async def on_ready():
 async def on_message(message):
     await bot.process_commands(message)
     text = message.content.lower()
+    if random.randint(1,100) == 1:
+        await message.channel.send("?", reference=message)
     if bot.data["guild_specific"][str(message.guild.id)]['censor_job'] == True and "job" in text:
         await message.channel.send("DONT SAY THAT WORD", reference=message)
         try:
